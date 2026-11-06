@@ -67,6 +67,13 @@ note right of SqlDialect
   DialectFactory + db/migration/oracle/ scripts
   + the integration tests run against it.
 end note
+note left of DialectFactory
+  <b>Why no in-memory dialect?</b>
+  DB_URL=memory: runs no SQL, so it needs no SqlDialect.
+  StorageFactory picks in-memory storage one level up,
+  before any dialect is chosen (diagram 28);
+  DialectFactory refuses memory: by design.
+end note
 note bottom of Migrator
   db/migration/<folder>/V1, V2, V3 …
   Same version numbers on every product;

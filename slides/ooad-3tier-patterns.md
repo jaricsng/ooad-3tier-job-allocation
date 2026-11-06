@@ -721,9 +721,9 @@ Enforced by `make lint` (form) and `NamingConventionTest` (role).
 ![bg right:52% contain](../diagrams/png/27-sql-dialect.png)
 
 - `DB_URL` prefix → **`DialectFactory`** → `PostgresDialect` or `MySqlDialect`
-- The **Strategy** holds only what really differs: scripts folder, duplicate-key code (23505 vs 1062), UTC session, first-rows clause
-- Everything else is **portable SQL**: `IN`, `EXISTS`, `CASE`, collection tables
-- Same 23 integration and 4 browser tests pass on **both**
+- **Strategy** = only what differs: scripts, duplicate-key code, UTC session, first-rows clause
+- The rest is **portable SQL**; the same 34 integration tests pass on **both**
+- `memory:` runs no SQL, so no dialect: `StorageFactory` picks it first (slide 44)
 
 ---
 

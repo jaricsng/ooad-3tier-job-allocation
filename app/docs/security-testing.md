@@ -100,6 +100,11 @@ Two alerts are lowered to Informational, **only for 127.0.0.1**: "Basic auth ove
 | F3 | DAST | Basic credentials and the site over plain HTTP | High/Medium in the local harness | Production is HTTPS-only (P1, P3, P7, P9; HSTS sent when `COOKIE_SECURE=true`); alerts lowered only for 127.0.0.1, with the reason in the plan | Accepted (local only) |
 | F4 | Coverage review | The first DAST plan targeted `/api/v1/api/v1/…`: a green scan that reached no API endpoint | Process | Target URL fixed; reports now checked for the URLs actually scanned | Fixed |
 | F5 | Tooling | ZAP's OpenAPI parser rejects a valid OpenAPI 3.1 `license.identifier` | None | The scan uses a copy of the contract without the licence block; the plan still fails on genuine errors | Worked around |
+| F6 | CI (first run on GitHub) | SAST crashed before scanning: only `semgrep` was pinned, and a fresh Python 3.12 environment resolved without `pkg_resources`, which semgrep's Python path needs (through opentelemetry). A laptop with an older environment passed | Gate not running = no SAST | `security/requirements.txt` now pins every package to an exact version, including `setuptools` 80.9.0 (the last release with `pkg_resources`); checked on semgrep's Python path (`--legacy`) | Fixed |
+| F7 | Audit on macOS | `make dast` printed ZAP's usage text: the repository path contains a space and the Makefile passed it unquoted | DAST not running | Paths quoted in the `dast` recipe; verified from a path with a space | Fixed |
+| F8 | Audit on macOS | Pen-test probe WSTG-INPV-11 reported "broken pipe": the server correctly answered 413 after 64 KB and closed, while the probe was still sending 2 MB | False failure (the control works) | The probe declares 2 MB, sends just over the limit, then reads the answer; same check, no race on any OS | Fixed |
+
+Lesson from F6–F8: a gate that crashes or misfires is as bad as no gate. Run the gates on a second machine and in CI before trusting a green result, and read *why* a gate failed before changing it.
 
 ## 7. Audit as code
 

@@ -225,7 +225,7 @@ dast: build $(ZAP) ## DAST: OWASP ZAP (spider, passive + active scan of the UI a
 	@sed -e 's#$${DAST_PORT}#$(DAST_PORT)#g' -e 's#$${APP_DIR}#$(CURDIR)#g' security/zap/plan.yaml > $(SECURITY_OUT)/zap/plan.yaml
 	@# Scan copy of the contract without the licence block: ZAP's parser wrongly rejects a valid 3.1 licence.
 	@sed -e '/^  license:/,/^    identifier:/d' src/main/resources/api/openapi.yaml > $(SECURITY_OUT)/zap/openapi-scan.yaml
-	@$(ZAP) -cmd -dir $(CURDIR)/$(SECURITY_OUT)/zap-home -autorun $(CURDIR)/$(SECURITY_OUT)/zap/plan.yaml; status=$$?; \
+	@$(ZAP) -cmd -dir "$(CURDIR)/$(SECURITY_OUT)/zap-home" -autorun "$(CURDIR)/$(SECURITY_OUT)/zap/plan.yaml"; status=$$?; \
 	  kill $$(cat target/dast-app.pid) 2>/dev/null; rm -f target/dast-app.pid; \
 	  python3 security/zap/summary.py $(SECURITY_OUT)/zap/zap-report.json; exit $$status
 

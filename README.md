@@ -112,7 +112,7 @@ Two profile-based conventions remain, both permitted by UML's extension mechanis
 
 ## Building the outputs
 
-Run all commands from this folder (`3-tier-job-allocation`).
+Run all commands from this folder (`3-tier-job-allocation`). Application targets (`make db-up`, `make run`, `make test`, `make audit`…) also work from here: the root `Makefile` forwards any target it does not define to `app/Makefile` (only `all` and `clean` mean the teaching materials here; use `make -C app clean` for the application).
 
 PlantUML runs from a jar: set `export PLANTUML="java -jar $HOME/dev/plantuml-1.2026.7.jar"` in `~/.zshrc` (the Makefile reads it). Homebrew's `plantuml` formula is avoided because it forces an OpenJDK upgrade.
 

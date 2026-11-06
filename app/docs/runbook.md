@@ -1,9 +1,9 @@
 # Operations Runbook — Job Allocation App
 
-All commands run from the `app` folder:
+Run the commands from the `app` folder or from the repository root: the root `Makefile` forwards every target it does not define itself (`db-up`, `run`, `test`, `audit`…) to `app/Makefile`. The two exceptions are `make all` and `make clean`, which at the root build and clean the teaching materials; use `make -C app clean` for the application.
 
 ```bash
-cd ~/dev/"Software Engineering"/OOAD/3-tier-job-allocation/app
+cd ~/dev/"Software Engineering"/OOAD/3-tier-job-allocation      # or …/3-tier-job-allocation/app
 ```
 
 ## 0. Quick reference

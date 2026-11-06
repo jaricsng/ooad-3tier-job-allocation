@@ -51,3 +51,10 @@ $(BUILD):
 
 clean:
 	rm -rf $(BUILD)
+
+# Any target not defined above is an application target: forward it to app/Makefile, so that
+# `make db-up`, `make run`, `make test`, `make audit` work from the repository root too.
+# (`all` and `clean` exist in both: here they mean the teaching materials; use `make -C app clean`.)
+.DEFAULT:
+	@$(MAKE) --no-print-directory -C app $@
+

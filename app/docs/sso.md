@@ -55,6 +55,31 @@ Providers are switched on by setting their client id. Client **secrets** are inj
 | `SSO_APPLE_CLIENT_ID`, `_TEAM_ID`, `_KEY_ID`, `_PRIVATE_KEY_FILE` | | Apple Services ID and a Sign in with Apple key (.p8 file, never committed) |
 | `SSO_OIDC_NAME`, `_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET` | | Any other OpenID Connect provider (uses its discovery document) |
 
+## Try it on your laptop (step by step)
+
+The sign-in page shows a provider's button only when that provider is configured, so with a fresh checkout you see the password form alone. To try single sign-on locally:
+
+1. **Register the app** with Google and/or Microsoft (next section). Use these redirect URIs, which both providers accept over plain `http` because they are loopback addresses:
+   - `http://127.0.0.1:8080/sso/google/callback`
+   - `http://127.0.0.1:8080/sso/microsoft/callback`
+2. **Put the settings in `app/.env`** (git-ignored, read by `make run`, skipped by the secret scan, so real secrets may live there on your own laptop):
+
+   ```bash
+   SSO_BASE_URL=http://127.0.0.1:8080
+   SSO_GOOGLE_CLIENT_ID=<client id>.apps.googleusercontent.com
+   SSO_GOOGLE_CLIENT_SECRET=           # paste the client secret after the '='
+   SSO_MICROSOFT_CLIENT_ID=<application (client) id>
+   SSO_MICROSOFT_CLIENT_SECRET=        # paste the client secret value after the '='
+   SSO_MICROSOFT_TENANT=organizations
+   ```
+3. **Link your account.** Sign-in links by verified e-mail, and the demo accounts use `@example.com` addresses, so give one of them your real address:
+   - PostgreSQL: `make db-psql`, then `update app_user set email = 'you@gmail.com' where username = 'supervisor';`
+   - In-memory storage: change the e-mail of the `supervisor` row in `src/main/resources/db/memory/users.csv` (local only; do not commit your address).
+   - Or set `SSO_AUTO_PROVISION=viewer` in `.env` to let an unknown address in as a read-only Viewer.
+4. **Restart** with `make run` and open `http://127.0.0.1:8080`, exactly this host: the redirect URI must match, and `localhost` is a different host to the providers. The log line `Starting Job Allocation … sso=[google, microsoft]` shows which providers are on.
+
+**Apple** needs HTTPS and a domain you have verified with Apple, even for testing, so it cannot run on `127.0.0.1`. Use a deployed instance with a real certificate (or an HTTPS tunnel to your laptop whose domain you register with Apple).
+
 ## Registering the app with each provider
 
 The redirect URI is always `SSO_BASE_URL/sso/<provider>/callback`. For local testing, use `http://127.0.0.1:8080`; Google and Microsoft accept `http` for loopback addresses.

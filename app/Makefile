@@ -13,6 +13,11 @@ SHELL      := /bin/bash
 # Optional local settings (not committed): e.g. DB_PORT=5433 when 5432 is already in use.
 # docker compose reads the same .env file, so the container and the app always agree.
 -include .env
+# Pass every setting from .env to the app (make run, tests) and to docker compose, not only the
+# database ones: e.g. SSO_GOOGLE_CLIENT_ID, APP_PORT, POLICY. Real secrets may live here because
+# .env is git-ignored and skipped by the secret-leak scan (see .gitleaks.toml).
+ENV_KEYS   := $(shell sed -n 's/^[[:space:]]*\([A-Za-z_][A-Za-z0-9_]*\)[[:space:]]*=.*/\1/p' .env 2>/dev/null)
+export $(ENV_KEYS)
 DB_PORT    ?= 5432
 export DB_PORT
 export DB_URL      ?= jdbc:postgresql://localhost:$(DB_PORT)/joballoc

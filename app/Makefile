@@ -90,7 +90,10 @@ ZAP                := $(TOOLS)/ZAP_$(ZAP_VERSION)/zap.sh
 # To upgrade: docker buildx imagetools inspect semgrep/semgrep:<version>, take the index digest, run make sast.
 SEMGREP_VERSION    := 1.184.0
 SEMGREP_IMAGE      := semgrep/semgrep@sha256:cc1b68266f267878b39739373ea9985b9a78e5d64497dd875c8de100b22695ed
-SEMGREP            := docker run --rm --user "$$(id -u):$$(id -g)" -e HOME=/tmp -e SEMGREP_ENABLE_VERSION_CHECK=0 \
+# Hardened run: no network (local rules, metrics and version check off), no Linux capabilities, no privilege
+# escalation. This contains the image's known CVEs (docs/security-testing.md, F10) to an offline, unprivileged run.
+SEMGREP            := docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges \
+                      --user "$$(id -u):$$(id -g)" -e HOME=/tmp -e SEMGREP_ENABLE_VERSION_CHECK=0 \
                       -v "$(CURDIR):/src" -w /src $(SEMGREP_IMAGE) semgrep
 SECURITY_OUT       := target/security
 DAST_PORT          ?= 8098

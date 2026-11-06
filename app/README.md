@@ -8,7 +8,7 @@ It is written in **plain Java 21 with no frameworks**. The web server, ORM, tran
 |---|---|---|
 | Presentation (UI Service) | `edu.ooad.joballoc.web` | Front controller, router, sessions, CSRF, server-rendered responsive views (Bootstrap 5.3 CSS, no JavaScript), REST API `/api/v1`, DTOs |
 | Business | `edu.ooad.joballoc.business`, `edu.ooad.joballoc.domain` | `AllocationService` facade, service implementation, policies, events, security; rich domain model |
-| Persistence | `edu.ooad.joballoc.persistence` | Annotation-based ORM, connection pool, transactions, migrations, DAO interfaces and implementations |
+| Persistence | `edu.ooad.joballoc.persistence`, `edu.ooad.joballoc.storage` | DAO interfaces; storage chosen by `DB_URL`: PostgreSQL or MySQL (annotation-based ORM, SQL dialects, connection pool, transactions, migrations) or in-memory DAOs |
 
 ## Quick start
 

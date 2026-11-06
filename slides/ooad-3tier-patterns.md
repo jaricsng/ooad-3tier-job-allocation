@@ -197,7 +197,7 @@ Worker owns capacity and assignment rules; `AllocationPolicy` is the variation p
 
 **Business**: `SecuredTransactionalProxy` provides `AllocationService` and delegates to `AllocationServiceImpl`; policies and events plug in through `AllocationPolicy` and `DomainEventListener`.
 
-**Persistence**: `DataAccess` provides the DAO interfaces; the mini ORM provides transactions; a `SqlDialect` covers product differences; JDBC talks to PostgreSQL (or MySQL) in Docker.
+**Persistence**: `DataAccess` provides the DAO interfaces; `StorageFactory` picks the storage from `DB_URL`: PostgreSQL or MySQL (mini ORM + `SqlDialect` + JDBC) or in-memory DAOs.
 
 Lollipop = provided interface · dashed arrow = required (`«use»`).
 
@@ -261,7 +261,7 @@ On success: allocation saved → `JobAllocated` published → audit row written 
 
 **Tier 2**: `joballoc.jar` on the JVM, bound to `127.0.0.1:8080`
 
-**Tier 3**: PostgreSQL 16 (or MySQL 8.4) in Docker; data in a named volume
+**Tier 3**: PostgreSQL 16 or MySQL 8.4 in Docker, data in a named volume; with `DB_URL=memory:` no database node at all
 
 Configuration comes from environment variables, never from code.
 
@@ -285,7 +285,7 @@ Configuration comes from environment variables, never from code.
 |---|---|---|
 | Web browser | 1 · Presentation | HTML + CSS |
 | Web application | 2 · Business | Java 21, JDK HttpServer |
-| Database | 3 · Persistence | PostgreSQL 16 or MySQL 8.4 |
+| Database | 3 · Persistence | PostgreSQL 16 or MySQL 8.4; none with `memory:` |
 
 **Discuss:** why is the browser a tier but not a separate deployable?
 
@@ -448,7 +448,7 @@ class AllocationServiceImpl {
 }
 ```
 
-**After**: swap JDBC for in-memory in one place.
+**After**: one factory creates every DAO; `DB_URL` picks PostgreSQL, MySQL or in-memory (slide 44).
 
 > **Discuss:** Factory or DI container: what does each cost?
 
@@ -812,7 +812,7 @@ Frameworks: NIST AI RMF · ISO/IEC 42001 · OWASP Top 10 for LLM Apps · IMDA Mo
 | UI (View) | Output escaped; CSP `script-src 'none'`; CSRF token on every form | `WebUnitTest`; Playwright end-to-end (4 tests, incl. phone) |
 | UI Service | Session login, PBKDF2 passwords, lockout, login CSRF token, OIDC SSO; role check (`@RequiresRole`) in the proxy | `ApiSecurityIT`, `SsoIT`; `SecurityTest`, `IdTokenVerifierTest` |
 | Business / Domain | Rules inside `Worker` and `Job`; transaction per facade call | `WorkerTest`, `JobTest`, `AllocationServiceTest`, `PolicyTest` |
-| Persistence (DAO) | Parameterised SQL; optimistic locking; append-only audit trigger | `PersistenceIT` against real PostgreSQL **and** MySQL test databases |
+| Persistence (DAO) | Parameterised SQL; optimistic locking; append-only audit trigger; storage chosen by `DB_URL` | `PersistenceIT` on PostgreSQL **and** MySQL; HTTP/API tests also on in-memory storage |
 | Architecture | Dependencies point downward only; ports and adapters | `ArchitectureTest` (fails the build on a violation) |
 | API | OpenAPI contract; Problem Details; idempotency; ETag | `OpenApiContractTest`, `ApiIntegrationPatternsIT` |
 
@@ -830,3 +830,4 @@ Whole app: secret-leak, SAST, SCA, DAST and pen-test gates; `make audit`. **Not 
 - **Assign**: GRASP decides who does the work; GoF patterns make it changeable.
 - **Verify**: contracts become tests; diagrams-as-code stay in sync with the code.
 - **Refactor**: name the anti-pattern first, then apply the pattern, and keep every gate green.
+- **Design for change**: one setting (`DB_URL`) switches PostgreSQL, MySQL or in-memory storage; no other code changes.

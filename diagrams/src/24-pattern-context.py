@@ -182,6 +182,10 @@ def svg():
                f'<ellipse cx="935" cy="946" rx="80" ry="10" fill="{ORANGE_BG}" stroke="{ORANGE}"/>')
     out.append(text(935, 914, "PostgreSQL 16", 13, "bold"))
     out.append(text(935, 930, "or MySQL 8.4 (Docker)", 12))
+    # In-memory storage has no database node: it lives inside the JVM
+    out.append(text(840, 904, "Storage chosen by DB_URL (StorageFactory):", 12, "bold", MUTED, "end"))
+    out.append(text(840, 920, "jdbc:postgresql / jdbc:mysql → this database", 12, fill=MUTED, anchor="end"))
+    out.append(text(840, 936, "memory: → in-memory DAOs inside the JVM, no database", 12, fill=MUTED, anchor="end"))
     # Legend: every pattern, linked to its slide
     out.append(text(40, 885, "Patterns → slide", 14, "bold", BLUE, "start"))
     for i, (n, (name, slide)) in enumerate(PATTERNS.items()):

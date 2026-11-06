@@ -70,4 +70,9 @@ else else
     end
   end
 end
+note over JD, DB
+  Same messages on every storage. With DB_URL=memory: the DAOs are in-memory
+  (InMemoryDAOFactory), BEGIN/COMMIT/ROLLBACK become lock + snapshot/restore
+  (InMemoryTransactionAdapter), and the :Database lifeline is not used.
+end note
 @enduml

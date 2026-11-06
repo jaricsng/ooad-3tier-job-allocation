@@ -37,7 +37,8 @@ JVM .. MYC : <<TCP/JDBC, TLS>>\n127.0.0.1:${MYSQL_PORT} (3306)\nalternative to P
 note right of JVM
   Configured by environment variables:
   DB_URL (jdbc:postgresql:// or jdbc:mysql://
-  picks the SQL dialect), DB_USER, DB_PASSWORD,
+  picks the SQL dialect; memory: runs with no
+  database container at all), DB_USER, DB_PASSWORD,
   APP_PORT, APP_BIND, COOKIE_SECURE
 end note
 @enduml

@@ -29,12 +29,13 @@ rectangle "Job Allocation System" {
     usecase "Allocate job\n--\nextension points\nstale version" as UC_ALLOC
     usecase "Auto-allocate jobs" as UC_AUTO
     usecase "Unassign allocation" as UC_UN
-    usecase "Refresh after\nconcurrent change" as UC_CONFLICT
   }
   together {
+    ' Layout only: declared here so Record audit event is drawn to the right of Refresh after concurrent change.
     usecase "Rank workers" as UC_RANK
-    usecase "Check eligibility" as UC_CHECK
     usecase "Record audit event" as UC_AUDIT
+    usecase "Check eligibility" as UC_CHECK
+    usecase "Refresh after\nconcurrent change" as UC_CONFLICT
   }
 }
 

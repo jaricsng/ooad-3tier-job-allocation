@@ -3,10 +3,11 @@
 Checks every file git would commit (or, before `git init`, every file not excluded below):
   1. private/ is git-ignored and none of its files would be committed;
   2. the slide decks hold no HTML comments other than Marp directives (speaker notes live in private/);
-  3. no file contains a term from private/denylist.txt (one case-sensitive term per line; # for comments).
+  3. no file contains a term from private/denylist.txt (one case-sensitive term per line; # for comments);
+  4. every script that starts with #! is executable (git mode 100755), so it runs as documented.
 Exit status 1 on any finding.
 """
-import pathlib, re, subprocess, sys
+import os, pathlib, re, subprocess, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SKIP_DIRS = {".git", "node_modules", "target", "tools", "build", "private", "coverage", ".sync",
@@ -22,6 +23,15 @@ def candidate_files():
     except (subprocess.CalledProcessError, FileNotFoundError):
         return [p for p in ROOT.rglob("*") if p.is_file() and not SKIP_DIRS & set(p.relative_to(ROOT).parts)
                 and p.name not in {".env", ".DS_Store"}]
+
+
+def git_modes():
+    """File modes as git records them (100755 = executable), or {} outside a git repository."""
+    try:
+        out = subprocess.run(["git", "-C", str(ROOT), "ls-files", "-s"], check=True, capture_output=True, text=True).stdout
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return {}
+    return {line.split("\t", 1)[1]: line.split()[0] for line in out.splitlines() if "\t" in line}
 
 
 def main():
@@ -40,7 +50,16 @@ def main():
     denylist = ROOT / "private" / "denylist.txt"
     terms = [t.strip() for t in denylist.read_text().splitlines()
              if t.strip() and not t.startswith("#")] if denylist.exists() else []
+    modes = git_modes()
     for f, r in zip(files, rel):
+        try:
+            with f.open("rb") as fh:
+                shebang = fh.read(2) == b"#!"
+        except OSError:
+            shebang = False
+        executable = modes.get(r) == "100755" if modes else os.access(f, os.X_OK)
+        if shebang and not executable:
+            problems.append(f"{r}: starts with #! but is not executable (git update-index --chmod=+x {r})")
         try:
             text = f.read_text()
         except (UnicodeDecodeError, OSError):

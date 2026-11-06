@@ -37,6 +37,19 @@ public class WorkerTest {
     }
 
     @Test
+    public void anyWorkerWithCapacityCanTakeAJobThatRequiresNoSkill() {
+        Job general = job("J1", 2, Priority.LOW);
+        assertTrue(worker("W1", 8).canTake(general));
+        assertTrue(worker("W2", 8, "LINUX").canTake(general));
+    }
+
+    @Test
+    public void aWorkerWithoutSkillsCannotTakeAJobThatRequiresOne() {
+        Worker trainee = worker("W1", 8);
+        assertFalse(trainee.canTake(job("J1", 2, Priority.LOW, "LINUX")));
+    }
+
+    @Test
     public void cannotExceedDailyCapacity() {
         Worker w = worker("W1", 6, "LINUX");
         w.assign(job("J1", 4, Priority.LOW, "LINUX"), "sam", now);

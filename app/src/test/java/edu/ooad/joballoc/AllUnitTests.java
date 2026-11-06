@@ -15,6 +15,7 @@ import org.junit.runners.Suite;
         edu.ooad.joballoc.web.WebUnitTest.class,
         edu.ooad.joballoc.web.http.HttpLayerTest.class,
         edu.ooad.joballoc.web.view.StaticAssetsTest.class,
+        edu.ooad.joballoc.web.view.BoardViewTest.class,
         edu.ooad.joballoc.web.sso.IdTokenVerifierTest.class,
         edu.ooad.joballoc.persistence.ConnectionPoolTest.class,
         edu.ooad.joballoc.persistence.DialectTest.class,

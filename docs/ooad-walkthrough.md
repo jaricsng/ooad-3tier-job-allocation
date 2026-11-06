@@ -35,10 +35,12 @@ Rule: dependencies point downward only.
 
 ## 3. Operation contract: `allocate(jobId, workerId, jobVersion, actor) : Allocation`
 
+**Business rule (skills).** A job states whether it needs particular skills: it may list zero or more required skills. If it lists any, only a worker who has every one of them can take it. If it lists none, the job needs no specific skill and any worker with enough remaining capacity can take it. A worker may likewise have zero or more skills (a new hire may have none yet), so both associations are `0..*` in the domain model.
+
 **Pre-conditions**
 
 - The job exists and its status is PENDING.
-- The worker has every required skill.
+- The worker has every skill the job requires (trivially true when the job requires none).
 - The worker's remaining capacity is at least the job's effort.
 - The actor holds the SUPERVISOR role.
 - `jobVersion` matches the stored version.
@@ -143,7 +145,7 @@ How the design achieves this:
 4. **Dependency inversion**: services depend on `DAOFactory`, the DAO interfaces and `TransactionRunner`, all owned by the business tier; `ArchitectureTest` fails the build if any business class imports a storage implementation.
 5. **Fail fast**: any other `DB_URL` (for example Oracle) is rejected at start-up with the list of supported forms.
 
-Evidence that the switch works: the same 34 integration tests pass on PostgreSQL 16 and MySQL 8.4, and 22 HTTP/API tests pass on in-memory storage (`make test-int-all`); `make db-copy` copies all data between any two storages. Diagrams: `27-sql-dialect`, `28-storage-family`; slides "One codebase, two databases" and "Three storages, one switch".
+Evidence that the switch works: the same 35 integration tests pass on PostgreSQL 16 and MySQL 8.4, and 22 HTTP/API tests pass on in-memory storage (`make test-int-all`); `make db-copy` copies all data between any two storages. Diagrams: `27-sql-dialect`, `28-storage-family`; slides "One codebase, two databases" and "Three storages, one switch".
 
 **Discussion:** what would adding Oracle need? (One dialect class, one entry in `DialectFactory`, one folder of migrations, the driver jar and its licence entry; the tests then run against it unchanged.)
 

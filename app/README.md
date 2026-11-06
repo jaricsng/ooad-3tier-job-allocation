@@ -27,9 +27,9 @@ No Docker? Install PostgreSQL 14+ locally and run `make db-setup` once instead.
 
 | Command | What it does |
 |---|---|
-| `make test` | 80 unit tests: domain rules, policies, service contracts, proxy chain, security, HTTP layer, Singleton, configuration, OpenAPI contract, architecture and naming rules, pinned UI assets and CSP-safe views, SQL dialects, migration splitting, in-memory storage (rollback, thread safety, seed drift), data copy, ID-token verification, SSO account linking (no database) |
-| `make test-int` | 34 integration tests against PostgreSQL: ORM, optimistic locking, append-only audit, migration checksums, data copy, HTTP API, OWASP checks, login CSRF, SSO against a test identity provider |
-| `make test-int-mysql` / `test-int-memory` / `test-int-all` | The same tests on MySQL (34) / in memory (22, SQL-only tests skipped) / on all three |
+| `make test` | 87 unit tests: domain rules, policies, service contracts, proxy chain, security, HTTP layer, Singleton, configuration, OpenAPI contract, architecture and naming rules, pinned UI assets and CSP-safe views, SQL dialects, migration splitting, in-memory storage (rollback, thread safety, seed drift), data copy, ID-token verification, SSO account linking (no database) |
+| `make test-int` | 35 integration tests against PostgreSQL: ORM, optimistic locking, append-only audit, migration checksums, data copy, HTTP API, OWASP checks, login CSRF, SSO against a test identity provider |
+| `make test-int-mysql` / `test-int-memory` / `test-int-all` | The same tests on MySQL (35) / in memory (22, SQL-only tests skipped) / on all three |
 | `make e2e` | 4 Playwright browser tests in Chrome, including a 390 px phone viewport (starts and stops the app itself) |
 | `make check` | Quality gate without a database: Checkstyle conventions, unit tests, Rego policies, OpenAPI lint, secret-leak scan, SAST, governance (run before every commit) |
 | `make lint` / `make policy` / `make api-lint` | Coding conventions / policy as code / OpenAPI lint (`make tools` fetches the pinned tools first; Spectral needs Node.js) |

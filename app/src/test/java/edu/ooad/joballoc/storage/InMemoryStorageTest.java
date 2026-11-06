@@ -1,5 +1,6 @@
 package edu.ooad.joballoc.storage;
 
+import edu.ooad.joballoc.TestData;
 import edu.ooad.joballoc.config.AppConfig;
 import edu.ooad.joballoc.domain.AuditEvent;
 import edu.ooad.joballoc.domain.Job;
@@ -60,6 +61,13 @@ public class InMemoryStorageTest {
     private static List<String> ids(String sql, String regex) {
         Matcher m = Pattern.compile(regex).matcher(sql);
         return m.results().map(r -> r.group(1)).toList();
+    }
+
+    @Test
+    public void aJobThatRequiresNoSkillRoundTrips() {
+        DAOFactory daos = new InMemoryStorage().daos();
+        daos.jobDao().save(new Job("M-0", "General task", Set.of(), 1, TestData.DAY, TestData.DAY, Priority.LOW));
+        assertTrue(daos.jobDao().findById("M-0").orElseThrow().getRequiredSkills().isEmpty());
     }
 
     @Test

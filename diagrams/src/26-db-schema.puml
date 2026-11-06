@@ -94,7 +94,7 @@ entity "schema_version" as schema_version <<Migrator>> {
 worker ||-right-o{ allocation : "assigned"
 allocation }o-right-|| job : "allocates"
 worker ||-down-o{ worker_skill : "has"
-job ||-down-|{ job_skill : "requires"
+job ||-down-o{ job_skill : "requires"
 worker_skill }o-right-|| skill : "is a"
 skill ||-right-o{ job_skill : "needed by"
 worker_skill -[hidden]down- app_user

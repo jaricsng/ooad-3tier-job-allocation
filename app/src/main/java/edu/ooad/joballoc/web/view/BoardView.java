@@ -24,6 +24,9 @@ import static edu.ooad.joballoc.web.view.Html.esc;
  */
 public final class BoardView {
 
+    /** Shown when a job requires no particular skill. */
+    static final String NO_SKILL_NEEDED = "no specific skill (any worker)";
+
     /** Everything the board needs: the filter, the snapshot from the facade, and flash messages. */
     public record Model(Actor actor, String csrf, JobCriteria criteria, BoardData data, String message, String error) {
         public LocalDate date() { return criteria.date(); }
@@ -97,6 +100,11 @@ public final class BoardView {
         return b.toString();
     }
 
+    /** Required skills for display; a job may require none (then any worker qualifies). */
+    static String skillsOrAny(Job j) {
+        return j.getRequiredSkills().isEmpty() ? NO_SKILL_NEEDED : String.join(", ", j.getRequiredSkills());
+    }
+
     /** Bootstrap badge colour per priority: the most urgent stands out. */
     private static String priorityBadge(Priority p) {
         String colour = switch (p) {
@@ -133,7 +141,7 @@ public final class BoardView {
                         .append(" in auto-allocate\"></td>");
             }
             b.append("<td class=\"nowrap fw-semibold\">").append(esc(j.getJobId())).append("</td><td>").append(esc(j.getTitle()))
-                    .append("</td><td class=\"d-none d-md-table-cell small\">").append(esc(String.join(", ", j.getRequiredSkills())))
+                    .append("</td><td class=\"d-none d-md-table-cell small\">").append(esc(skillsOrAny(j)))
                     .append("</td><td>").append(j.getEffortHours()).append("h</td><td class=\"nowrap d-none d-sm-table-cell\">")
                     .append(j.getDueDate()).append("</td><td>").append(priorityBadge(j.getPriority())).append("</td><td class=\"text-end\">")
                     .append("<a class=\"btn btn-sm ").append(sel ? "btn-primary" : "btn-outline-primary").append("\" href=\"")
@@ -162,7 +170,7 @@ public final class BoardView {
         Job j = m.selected();
         b.append(header("cand-h", "Eligible Workers for " + esc(j.getJobId()), null))
                 .append("<p class=\"small text-body-secondary px-3 pt-2 mb-2\">").append(esc(j.getTitle()))
-                .append(" · needs ").append(esc(String.join(", ", j.getRequiredSkills()))).append(" · ")
+                .append(" · needs ").append(esc(skillsOrAny(j))).append(" · ")
                 .append(j.getEffortHours()).append("h on ").append(j.getWorkDate()).append("</p>");
         b.append("<div class=\"table-responsive\"><table id=\"candidates\" class=\"table table-sm align-middle mb-0\">"
                 + "<thead class=\"table-light\"><tr><th scope=\"col\">Worker</th>"

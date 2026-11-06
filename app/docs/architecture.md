@@ -292,7 +292,7 @@ erDiagram
     JOB ||--o{ ALLOCATION : "allocated by"
     WORKER ||--o{ ALLOCATION : "holds"
     WORKER ||--o{ WORKER_SKILL : "has"
-    JOB ||--|{ JOB_SKILL : "requires"
+    JOB ||--o{ JOB_SKILL : "requires"
     SKILL ||--o{ WORKER_SKILL : "held by"
     SKILL ||--o{ JOB_SKILL : "needed by"
 ```

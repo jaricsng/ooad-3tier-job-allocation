@@ -36,7 +36,7 @@ Sessions end after 30 minutes without activity, or when you click **Sign out**.
 | Area | Shows |
 |---|---|
 | **Filters** | Date (defaults to today), priority and skill. Click **Refresh** to apply. |
-| **Pending Jobs** | Jobs waiting for a worker on that date, most urgent first (CRITICAL → LOW, then earliest due date). |
+| **Pending Jobs** | Jobs waiting for a worker on that date, most urgent first (CRITICAL → LOW, then earliest due date). The **Skills** column lists the skills a job requires; a job that needs none shows *no specific skill (any worker)*, and any worker with enough hours left can take it. |
 | **Eligible Workers** | After you **Select** a job: every worker, the ones who can take it first, with their load and hours left. Workers who can't take it show the reason. |
 | **Allocations** | Everything allocated for the date, who did it, and an **Unassign** button. |
 

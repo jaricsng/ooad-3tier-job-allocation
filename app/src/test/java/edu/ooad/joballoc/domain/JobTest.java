@@ -22,12 +22,19 @@ public class JobTest {
     }
 
     @Test
-    public void rejectsInvalidEffortAndMissingSkills() {
+    public void rejectsInvalidEffortAndId() {
         LocalDate d = LocalDate.of(2026, 11, 5);
         assertThrows(IllegalArgumentException.class, () -> new Job("J1", "t", Set.of("X"), 0, d, d, Priority.LOW));
         assertThrows(IllegalArgumentException.class, () -> new Job("J1", "t", Set.of("X"), 25, d, d, Priority.LOW));
-        assertThrows(IllegalArgumentException.class, () -> new Job("J1", "t", Set.of(), 2, d, d, Priority.LOW));
         assertThrows(IllegalArgumentException.class, () -> new Job(" ", "t", Set.of("X"), 2, d, d, Priority.LOW));
+        assertThrows(NullPointerException.class, () -> new Job("J1", "t", null, 2, d, d, Priority.LOW));
+    }
+
+    @Test
+    public void aJobMayRequireNoSkill() {
+        Job j = job("J1", 2, Priority.LOW);
+        assertTrue(j.getRequiredSkills().isEmpty());
+        assertTrue(j.isAllocatable());
     }
 
     @Test

@@ -145,7 +145,7 @@ Shaped by what the screen shows, not by the tables. Carry the job version for op
 | Pre-conditions | Post-conditions |
 |---|---|
 | Job exists and status = PENDING | Allocation created (ACTIVE), linked to Job and Worker |
-| Worker has every required skill | `Job.status` = ALLOCATED; version incremented |
+| Worker has every skill the job requires (a job may require none) | `Job.status` = ALLOCATED; version incremented |
 | Remaining capacity ≥ job effort | Audit event JOB_ALLOCATED appended |
 | Actor holds the SUPERVISOR role | On any failure: no state change → 409 / 422 |
 | `jobVersion` matches the stored version | |
@@ -722,7 +722,7 @@ Enforced by `make lint` (form) and `NamingConventionTest` (role).
 
 - `DB_URL` prefix → **`DialectFactory`** → `PostgresDialect` or `MySqlDialect`
 - **Strategy** = only what differs: scripts, duplicate-key code, UTC session, first-rows clause
-- The rest is **portable SQL**; the same 34 integration tests pass on **both**
+- The rest is **portable SQL**; the same 35 integration tests pass on **both**
 - `memory:` runs no SQL, so no dialect: `StorageFactory` picks it first (slide 44)
 
 ---

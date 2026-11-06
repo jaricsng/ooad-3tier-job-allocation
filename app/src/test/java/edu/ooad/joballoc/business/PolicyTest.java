@@ -41,6 +41,14 @@ public class PolicyTest {
     }
 
     @Test
+    public void skillMatchKeepsSpecialistsFreeForAJobThatRequiresNoSkill() {
+        Worker trainee = worker("W-T", 8);
+        Worker specialist = worker("W-S", 8, "DBA");
+        Job general = job("J", 2, Priority.LOW);
+        assertEquals(List.of("W-T", "W-S"), ids(factory.forName("SKILL_MATCH"), general, List.of(specialist, trainee)));
+    }
+
+    @Test
     public void factoryDefaultsAndRejectsUnknown() {
         assertEquals(PolicyFactory.DEFAULT, factory.forName(null).name());
         assertEquals(List.of("SKILL_MATCH", "LEAST_LOADED", "FIRST_FIT"), factory.names());

@@ -305,7 +305,7 @@ The application supports **PostgreSQL 14+** (default) and **MySQL 8.0.16+** (tes
 ```bash
 make db-up-mysql        # MySQL 8.4 in Docker, databases joballoc + joballoc_test, waits until healthy
 make run-mysql          # the app on jdbc:mysql://localhost:3306/joballoc
-make test-int-mysql     # the 34 integration tests against MySQL
+make test-int-mysql     # the 35 integration tests against MySQL
 make e2e-mysql          # the browser tests with the app on MySQL
 make db-mysql           # mysql prompt as the app user
 make db-down-mysql      # stop (keep data); make db-reset-mysql deletes the data

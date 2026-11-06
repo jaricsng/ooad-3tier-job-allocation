@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Domain model
 skinparam classAttributeIconSize 0
 hide empty members
 left to right direction
@@ -37,19 +38,19 @@ class Skill <<valueObject>> {
   -code : String
   -name : String
 }
-enum JobStatus {
+enum JobStatus <<enumeration>> {
   PENDING
   ALLOCATED
   IN_PROGRESS
   DONE
   CANCELLED
 }
-enum AllocationStatus {
+enum AllocationStatus <<enumeration>> {
   ACTIVE
   RELEASED
   COMPLETED
 }
-interface AllocationPolicy <<strategy>> {
+interface AllocationPolicy <<interface>> <<strategy>> {
   +order(job : Job) : Comparator<Worker>
   +rank(job : Job, eligible : List<Worker>) : List<Worker>
 }
@@ -58,8 +59,14 @@ class LeastLoadedPolicy
 
 Worker "1" -- "0..*" Allocation : holds >
 Allocation "0..*" --> "1" Job : for >
-Worker "0..*" --> "1..*" Skill : has >
-Job "0..*" --> "1..*" Skill : requires >
+Worker "0..*" --> "0..*" Skill : has >
+Job "0..*" --> "0..*" Skill : requires >
+note bottom of Skill
+  Business rule: a job lists zero or more required skills.
+  Listed: only a worker with every one of them can take it.
+  None listed: any worker with enough capacity can take it.
+  A worker may also have no skills yet (e.g. a new hire).
+end note
 Job ..> JobStatus
 Allocation ..> AllocationStatus
 AllocationPolicy <|.. SkillMatchPolicy

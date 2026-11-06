@@ -35,10 +35,12 @@ Rule: dependencies point downward only.
 
 ## 3. Operation contract: `allocate(jobId, workerId, jobVersion, actor) : Allocation`
 
+**Business rule (skills).** A job states whether it needs particular skills: it may list zero or more required skills. If it lists any, only a worker who has every one of them can take it. If it lists none, the job needs no specific skill and any worker with enough remaining capacity can take it. A worker may likewise have zero or more skills (a new hire may have none yet), so both associations are `0..*` in the domain model.
+
 **Pre-conditions**
 
 - The job exists and its status is PENDING.
-- The worker has every required skill.
+- The worker has every skill the job requires (trivially true when the job requires none).
 - The worker's remaining capacity is at least the job's effort.
 - The actor holds the SUPERVISOR role.
 - `jobVersion` matches the stored version.
@@ -118,7 +120,32 @@ A worker hands an active allocation to a colleague with the same skills. The sup
 | UI (View) | Output escaped; CSP `script-src 'none'`; CSRF token on every form | `WebUnitTest`; Playwright end-to-end |
 | UI Service | Session sign-in with PBKDF2 password hashes and lockout; role check (`@RequiresRole`) in `SecuredTransactionalProxy`; input validation in DTOs | `ApiSecurityIT`, `SecurityTest` |
 | Business / Domain | Rules inside `Worker` and `Job`; one transaction per facade call | `WorkerTest`, `JobTest`, `AllocationServiceTest`, `PolicyTest` |
-| Persistence (DAO) | Parameterised SQL; optimistic locking; append-only audit trigger | `PersistenceIT` against a real PostgreSQL test database |
+| Persistence (DAO) | Parameterised SQL; optimistic locking; append-only audit trigger; storage chosen by `DB_URL` | `PersistenceIT` against real PostgreSQL and MySQL test databases; HTTP/API tests also on in-memory storage |
 | Architecture | Dependencies point downward only | `ArchitectureTest` fails the build on a violation |
 
-**Not built yet, for discussion:** OIDC single sign-on, per-job authorisation (OWASP API1:2023 BOLA), an OpenAPI contract, an OWASP ZAP scan and Testcontainers.
+Also built since this walkthrough was first written: OIDC single sign-on (Google, Microsoft, Apple), an OpenAPI 3.1 contract checked by a test, and an OWASP ZAP scan (`make dast`).
+
+**Not built yet, for discussion:** per-job authorisation (OWASP API1:2023 BOLA) and Testcontainers.
+
+## 8. Designed for change: PostgreSQL, MySQL or in-memory storage
+
+The persistence tier is designed so that **one setting, `DB_URL`, switches the storage** without changing or recompiling any other code. The business tier sees only the DAO interfaces and the `TransactionRunner` port, so it cannot tell which storage it is using.
+
+| `DB_URL` | Storage (Abstract Factory) | DAOs | Transactions | Schema |
+|---|---|---|---|---|
+| `jdbc:postgresql://host:5432/joballoc` | `RelationalStorage` + `PostgresDialect` | `OrmDAOFactory` (mini ORM, JDBC) | Database transaction (`TransactionManagerAdapter`) | Migrations `db/migration/postgresql/V1..V4` |
+| `jdbc:mysql://host:3306/joballoc` | `RelationalStorage` + `MySqlDialect` | `OrmDAOFactory` (same classes) | Database transaction (same adapter) | Migrations `db/migration/mysql/V1..V4` (same versions) |
+| `memory:` | `InMemoryStorage` | `InMemoryDAOFactory` (guarded DAOs) | Lock + snapshot restored on failure (`InMemoryTransactionAdapter`, Memento) | Reference data from CSV; lost on restart |
+
+How the design achieves this:
+
+1. **Factory Method**: `StorageFactory.create(config)` reads `DB_URL` once, at start-up, and returns a `Storage`.
+2. **Abstract Factory**: a `Storage` supplies the DAOs, the transaction runner and the health check *as a family*, so a MySQL DAO can never be combined with the in-memory transaction runner.
+3. **Strategy + Factory**: for SQL storage, `DialectFactory` picks the `SqlDialect` from the URL prefix; it holds every product difference (pagination, duplicate-key codes, connection properties).
+4. **Dependency inversion**: services depend on `DAOFactory`, the DAO interfaces and `TransactionRunner`, all owned by the business tier; `ArchitectureTest` fails the build if any business class imports a storage implementation.
+5. **Fail fast**: any other `DB_URL` (for example Oracle) is rejected at start-up with the list of supported forms.
+
+Evidence that the switch works: the same 35 integration tests pass on PostgreSQL 16 and MySQL 8.4, and 22 HTTP/API tests pass on in-memory storage (`make test-int-all`); `make db-copy` copies all data between any two storages. Diagrams: `27-sql-dialect`, `28-storage-family`; slides "One codebase, two databases" and "Three storages, one switch".
+
+**Discussion:** what would adding Oracle need? (One dialect class, one entry in `DialectFactory`, one folder of migrations, the driver jar and its licence entry; the tests then run against it unchanged.)
+

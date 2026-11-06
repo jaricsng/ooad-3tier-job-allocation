@@ -36,3 +36,10 @@ skinparam boundaryBackgroundColor #F3F6FA
 skinparam boundaryBorderColor #1E4E8C
 skinparam controlBackgroundColor #F3F6FA
 skinparam controlBorderColor #1E4E8C
+' UML 2.5.1 notation (instead of PlantUML defaults):
+' - no coloured C/I/E/A class icons: interfaces and enumerations carry the keywords «interface» / «enumeration»
+' - visibility as text (+ - # ~), not icons
+' - decision and merge nodes are diamonds; conditions go in [guards] on the outgoing flows
+hide circle
+skinparam classAttributeIconSize 0
+skinparam conditionStyle diamond

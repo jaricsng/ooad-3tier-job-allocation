@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe cmp Job Allocation
 skinparam componentStyle uml2
 title Job Allocation — Component Diagram (UML 2.5.1, as built after refactoring)
 
@@ -15,6 +16,7 @@ package "Presentation tier — edu.ooad.joballoc.web" {
     component "BoardController\nLoginController" as BCs
     component "ApiController + DTOs\n(IdempotentHandler decorator)" as AC
     component "HealthController" as HC
+    component "SSO\n(SsoController, SsoService,\nOidcClient, IdTokenVerifier)" as SSO
     component "Views\n(BoardView, LoginView)" as VIEWS
   }
 }
@@ -43,12 +45,18 @@ package "Persistence tier — persistence" {
   component "Mini ORM\n(EntityMetadata, TransactionManager,\nConnectionPool, Migrator)" as ORM
   component "SQL dialects\n(DialectFactory, PostgresDialect,\nMySqlDialect)" as DIA <<strategy>>
   component "JDBC driver\n(pgjdbc or MySQL Connector/J)" as JDBC <<library>>
+  component "In-memory storage\n(InMemoryDAOFactory: guarded DAOs,\nsnapshot rollback)" as MEM <<DAO>>
+}
+package "Storage selection — edu.ooad.joballoc.storage" {
+  component "StorageFactory\n(DB_URL → RelationalStorage\nor InMemoryStorage)" as SF <<factory>>
 }
 package "Adapters — edu.ooad.joballoc.adapter" {
   component "TransactionManagerAdapter" as TMA <<adapter>>
   component "JdbcDatabaseHealthAdapter" as JDH <<adapter>>
+  component "InMemoryTransactionAdapter" as IMTA <<adapter>>
 }
-component "PostgreSQL 16 or MySQL 8.4\n(Docker: joballoc-db / joballoc-mysql)" as DB <<external>>
+component "PostgreSQL 16 or MySQL 8.4\n(Docker: joballoc-db / joballoc-mysql;\nnot used when DB_URL=memory:)" as DB <<external>>
+component "Identity providers\n(Google, Microsoft, Apple, OIDC)" as IDP <<external>>
 
 UI ..> IPAGES : <<use>>\nHTML forms
 CLI ..> IREST : <<use>>\nJSON + Basic auth
@@ -86,4 +94,12 @@ DA ..> DIA : product differences
 ORM ..> DIA : chosen from DB_URL
 ORM ..> JDBC
 JDBC ..> DB : <<use>>\nSQL (parameterised)
+IDAO -- MEM
+ITX -- IMTA
+IMTA ..> MEM : lock + snapshot
+SF ..> DA : jdbc:postgresql / jdbc:mysql
+SF ..> MEM : memory:
+FC ..> SSO : /sso/*
+SSO ..> IAUTH : authenticateExternal
+SSO ..> IDP : <<use>>\nOIDC over HTTPS
 @enduml

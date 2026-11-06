@@ -46,4 +46,8 @@ paths = [
   '''(^|/)node_modules/''',
   '''(^|/)e2e/(playwright-report|test-results)/''',
   '''(^|/)lib/.*\.jar$''',
+  # Local, git-ignored settings: the place where a developer keeps real local secrets (SSO client
+  # secrets, DB_PASSWORD). It cannot be committed (.gitignore), and GitHub push protection is a
+  # second line of defence; every other file is still scanned.
+  '''(^|/)\.env$''',
 ]

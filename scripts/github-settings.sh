@@ -22,12 +22,12 @@ echo "Merge settings: squash only, delete branches after merge"
 gh api -X PATCH "repos/$repo" --silent -F allow_merge_commit=false -F allow_rebase_merge=false \
   -F allow_squash_merge=true -F delete_branch_on_merge=true
 
-echo "Protect main: pull request, passing 'check', up to date, linear history, no force push"
+echo "Protect main: pull request, passing 'check' and 'check-latest-jdk', up to date, linear history, no force push"
 # Approvals: 0 while you are the only maintainer (GitHub does not let authors approve their own pull request).
 # Set APPROVALS=1 when a co-maintainer or teaching assistant can review.
 gh api -X PUT "repos/$repo/branches/main/protection" --silent --input - <<JSON
 {
-  "required_status_checks": { "strict": true, "contexts": ["check"] },
+  "required_status_checks": { "strict": true, "contexts": ["check", "check-latest-jdk"] },
   "enforce_admins": false,
   "required_pull_request_reviews": {
     "required_approving_review_count": ${APPROVALS:-0},

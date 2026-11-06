@@ -1,11 +1,12 @@
 @startuml
 !include style.iuml
+mainframe class DAO
 skinparam classAttributeIconSize 0
 hide empty members
 title DAO + Template Method + Exception Translation — as built (UML 2.5.1 class diagram)
 
 class AllocationServiceImpl <<service>>
-interface "GenericDAO<T, ID>" as GenericDAO <<DAO>> {
+interface "GenericDAO<T, ID>" as GenericDAO <<interface>> <<DAO>> {
   +findById(id : ID) : Optional<T>
   +findAll() : List<T>
   +findByIds(ids : Collection<ID>) : List<T> {default: one by one}
@@ -13,10 +14,10 @@ interface "GenericDAO<T, ID>" as GenericDAO <<DAO>> {
   +update(entity : T) : void
   +delete(id : ID) : void
 }
-interface JobDAO <<DAO>> {
+interface JobDAO <<interface>> <<DAO>> {
   +findPending(criteria : JobCriteria) : List<Job>
 }
-abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template>> {
+abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template method>> {
   #tx : TransactionManager
   #meta : EntityMetadata<T>
   #dialect : SqlDialect
@@ -28,7 +29,7 @@ abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template>> {
   -loadCollections(con, entities) : void
   -translate(sql : String, e : SQLException) : DataAccessException
 }
-interface SqlDialect <<strategy>> {
+interface SqlDialect <<interface>> <<strategy>> {
   +isUniqueViolation(e : SQLException) : boolean
   +firstRowsClause() : String
 }

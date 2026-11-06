@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe dep Classroom laptop
 skinparam nodeBackgroundColor #F3F6FA
 skinparam artifactBackgroundColor #FFFFFF
 skinparam artifactBorderColor #1E4E8C
@@ -32,12 +33,13 @@ node "Integration client\n(optional)" <<device>> as CLIENT
 BROWSER -- JVM : <<HTTP>>\n127.0.0.1:8080
 CLIENT -- JVM : <<HTTP>>\nREST /api/v1, JSON, Basic auth
 JVM -- PGC : <<TCP/JDBC>>\n127.0.0.1:${DB_PORT} (5432)
-JVM .. MYC : <<TCP/JDBC, TLS>>\n127.0.0.1:${MYSQL_PORT} (3306)\nalternative to PostgreSQL
+JVM -- MYC : <<TCP/JDBC, TLS>>\n127.0.0.1:${MYSQL_PORT} (3306)\nalternative to PostgreSQL
 
 note right of JVM
   Configured by environment variables:
   DB_URL (jdbc:postgresql:// or jdbc:mysql://
-  picks the SQL dialect), DB_USER, DB_PASSWORD,
+  picks the SQL dialect; memory: runs with no
+  database container at all), DB_USER, DB_PASSWORD,
   APP_PORT, APP_BIND, COOKIE_SECURE
 end note
 @enduml

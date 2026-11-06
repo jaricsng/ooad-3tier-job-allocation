@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class GoF behavioural patterns
 allowmixing
 hide empty members
 hide circle
@@ -20,23 +21,23 @@ usecase "Chain of\nResponsibility" as COR
 package "Persistence" {
   class AbstractOrmDAO
   class OrmJobDAO
-  interface SqlDialect
+  interface SqlDialect <<interface>>
   class PostgresDialect
   class MySqlDialect
 }
 package "Business" {
   class AllocationServiceImpl
-  interface AllocationPolicy
+  interface AllocationPolicy <<interface>>
   class SkillMatchPolicy
   class LeastLoadedPolicy
   class FirstFitPolicy
   class DomainEventPublisher
-  interface DomainEventListener
+  interface DomainEventListener <<interface>>
   class AuditListener
   class WorkloadMetricsListener
   class Worker
   class SecuredTransactionalProxy
-  interface Interceptor
+  interface Interceptor <<interface>>
   class SecurityInterceptor
   class ExceptionTranslationInterceptor
   class TransactionInterceptor

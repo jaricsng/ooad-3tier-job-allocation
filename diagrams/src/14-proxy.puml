@@ -1,12 +1,13 @@
 @startuml
 !include style.iuml
+mainframe class Proxy
 skinparam classAttributeIconSize 0
 hide empty members
 title Proxy + Chain of Responsibility — as built (UML 2.5.1 class diagram)
 
 class BoardController <<client>>
 class ApiController <<client>>
-interface AllocationService <<subject>> {
+interface AllocationService <<interface>> <<subject>> {
   +allocate(jobId : String, workerId : String, jobVersion : long) : Allocation
   +loadBoard(criteria : JobCriteria, selectedJobId : String) : BoardData
 }
@@ -18,13 +19,13 @@ class SecuredTransactionalProxy <<InvocationHandler>> {
   +{static} wrap(iface : Class<T>, target : T, tx : TransactionRunner) : T
   +invoke(proxy : Object, method : Method, args : Object[]) : Object
 }
-interface Interceptor {
+interface Interceptor <<interface>> {
   +intercept(method : Method, next : Invocation) : Object
 }
 class SecurityInterceptor
 class ExceptionTranslationInterceptor
 class TransactionInterceptor
-interface TransactionRunner <<port>> {
+interface TransactionRunner <<interface>> <<port>> {
   +inTransaction(work : Supplier<R>) : R
 }
 

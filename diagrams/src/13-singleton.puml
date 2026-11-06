@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Singleton
 skinparam classAttributeIconSize 0
 hide empty members
 left to right direction

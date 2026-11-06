@@ -5,7 +5,8 @@ skinparam ActivityBorderColor #1E4E8C
 skinparam ActivityDiamondBackgroundColor #FFF6E5
 skinparam ActivityDiamondBorderColor #D9822B
 skinparam SwimlaneBorderColor #8A97A6
-title Allocate Job — Activity Diagram (UML 2.5.1, as built)
+mainframe act Allocate Job
+title Allocate Job — Activity Diagram (UML 2.5.1, as built): decisions are empty diamonds; each outgoing flow carries its guard
 
 |Supervisor|
 start
@@ -17,50 +18,52 @@ start
 |Presentation (web)|
 :Render eligible workers (and reasons for the others);
 |Supervisor|
-:Click [Allocate] on a worker;
+:Click Allocate on a worker;
 |Presentation (web)|
 :POST /board/allocate\n(jobId, workerId, jobVersion, _csrf);
-if (Session valid and CSRF token matches?) then ([no])
+if () then ([session invalid or CSRF token mismatch])
   :403 / redirect to sign-in;
   stop
-else ([yes])
+else ([else])
 endif
 |Business|
-if (SecuredTransactionalProxy:\nactor has SUPERVISOR role?) then ([no])
+:SecuredTransactionalProxy: check role;
+if () then ([actor is not SUPERVISOR])
   :ForbiddenException → 403;
   stop
-else ([yes])
+else ([else])
 endif
 :BEGIN transaction;
 |Persistence|
 :JobDAO.findById(jobId);
 |Business|
-if (job.version == jobVersion?) then ([no])
+if () then ([job.version ≠ jobVersion])
   :ConcurrencyConflict → ROLLBACK;
   |Presentation (web)|
   :Redirect with "changed by someone else" (409);
   stop
-else ([yes])
+else ([else])
 endif
 |Persistence|
 :WorkerDAO.findWithAllocations(workerId, job.workDate);
 |Business|
-if (Worker.canTake(job)?\nskills · capacity · PENDING) then ([no])
+:Worker.canTake(job): skills, capacity, job PENDING;
+if () then ([not canTake])
   :AllocationRuleException → ROLLBACK;
   |Presentation (web)|
   :Redirect with the reason (422);
   stop
-else ([yes])
+else ([else])
 endif
 |Business|
 :Worker.assign(job)\n→ Job ALLOCATED, new Allocation, JobAllocated event;
 |Persistence|
-:AllocationDAO.save(allocation)\nJobDAO.update(job)  [version check]\nWorkerDAO.update(worker)  [version check];
-if (Optimistic lock OK?) then ([no])
+:AllocationDAO.save(allocation)\nJobDAO.update(job) with version check\nWorkerDAO.update(worker) with version check;
+if () then ([a row changed meanwhile])
   |Business|
   :OptimisticLock → 409 → ROLLBACK;
   stop
-else ([yes])
+else ([else])
 endif
 |Business|
 :DomainEventPublisher.publish(JobAllocated)\n(listeners called in order, same transaction);

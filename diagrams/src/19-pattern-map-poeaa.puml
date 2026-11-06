@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Enterprise, ECB and GRASP patterns
 allowmixing
 hide empty members
 hide circle
@@ -26,7 +27,7 @@ package "Business" {
   class JobCriteria
 }
 package "Persistence" {
-  interface JobDAO
+  interface JobDAO <<interface>>
   class OrmJobDAO
   class EntityMetadata
   class TransactionManager

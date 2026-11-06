@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Storage family
 skinparam classAttributeIconSize 0
 hide empty members
 title Storage family: Abstract Factory + Memento + Proxy — as built (UML 2.5.1 class diagram)
@@ -8,7 +9,7 @@ class App <<composition root>>
 class StorageFactory <<factory method>> {
   +{static} create(config : AppConfig) : Storage
 }
-interface Storage <<abstract factory>> {
+interface Storage <<interface>> <<abstract factory>> {
   +description() : String
   +daos() : DAOFactory
   +transactions() : TransactionRunner
@@ -28,8 +29,8 @@ class DatabaseTool <<tool>> {
 }
 
 package "business.port" {
-  interface TransactionRunner <<port>>
-  interface DatabaseHealth <<port>>
+  interface TransactionRunner <<interface>> <<port>>
+  interface DatabaseHealth <<interface>> <<port>>
 }
 package "adapter" {
   class TransactionManagerAdapter <<adapter>>
@@ -37,7 +38,7 @@ package "adapter" {
   class JdbcDatabaseHealthAdapter <<adapter>>
 }
 package "persistence" {
-  interface DAOFactory <<abstract factory>>
+  interface DAOFactory <<interface>> <<abstract factory>>
   class OrmDAOFactory
   class InMemoryDAOFactory {
     +inTransaction(work : Supplier<R>) : R

@@ -48,9 +48,8 @@ public class Job {
         if (effortHours < 1 || effortHours > HOURS_PER_DAY) {
             throw new IllegalArgumentException("effortHours must be between 1 and " + HOURS_PER_DAY);
         }
-        if (requiredSkills == null || requiredSkills.isEmpty()) {
-            throw new IllegalArgumentException("a job needs at least one required skill");
-        }
+        // Business rule: a job may require no skill at all (0..*); then any worker with capacity can take it.
+        Objects.requireNonNull(requiredSkills, "requiredSkills (use an empty set when no skill is needed)");
         this.jobId = jobId;
         this.title = Objects.requireNonNull(title, "title");
         this.requiredSkills = new LinkedHashSet<>(requiredSkills);

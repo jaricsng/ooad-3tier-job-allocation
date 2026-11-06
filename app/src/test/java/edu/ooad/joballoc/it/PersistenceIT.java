@@ -66,6 +66,12 @@ public class PersistenceIT {
     }
 
     @Test
+    public void aJobThatRequiresNoSkillRoundTrips() {
+        daos.jobDao().save(new Job("IT-0", "General task", Set.of(), 1, DAY, DAY, Priority.LOW));
+        assertTrue(daos.jobDao().findById("IT-0").orElseThrow().getRequiredSkills().isEmpty());
+    }
+
+    @Test
     public void mapsAllColumnTypesAndCollectionTables() {
         Job j = new Job("IT-1", "Map me", Set.of("LINUX", "GO"), 3, DAY, DAY.plusDays(2), Priority.HIGH);
         daos.jobDao().save(j);

@@ -6,7 +6,8 @@ title Components — Job Allocation web application (C4 level 3, as built after 
 
 Container(browser, "Web browser", "HTML + CSS")
 System_Ext(client, "Integration client", "REST consumer (OpenAPI 3.1 contract)")
-ContainerDb(db, "Job Allocation database", "PostgreSQL 16 or MySQL 8.4")
+ContainerDb(db, "Job Allocation database", "PostgreSQL 16 or MySQL 8.4 (not used with DB_URL=memory:)")
+System_Ext(idp, "Identity providers", "Google, Microsoft, Apple (OIDC)")
 
 Container_Boundary(app, "Job Allocation web application (Java 21)") {
   Component(hx, "HTTP adapter", "web.http.HttpExchangeAdapter", "Adapter: JDK HttpExchange ⇄ Request / Response")
@@ -23,6 +24,9 @@ Container_Boundary(app, "Job Allocation web application (Java 21)") {
   Component(dao, "Data access", "persistence.dao + persistence.ormdao", "DAO interfaces, DataAccessException hierarchy, AbstractOrmDAO")
   Component(orm, "Mini ORM", "persistence.orm + mapping", "Metadata mapping, identity map, transactions, connection pool, migrations")
   Component(dialect, "SQL dialects", "persistence.dialect", "Strategy per database product, chosen from DB_URL by DialectFactory")
+  Component(storage, "Storage selection", "storage: StorageFactory, RelationalStorage, InMemoryStorage", "Abstract Factory: DAOs + transactions + health that belong together, chosen from DB_URL")
+  Component(mem, "In-memory storage", "persistence.memory + InMemoryTransactionAdapter", "Guarded DAOs; transactions = lock + snapshot (Memento)")
+  Component(sso, "Single sign-on", "web.sso + SsoController", "OIDC code flow + PKCE; ID-token verification")
 }
 
 Rel(browser, hx, "HTTP", ":8080")
@@ -46,4 +50,9 @@ Rel(dao, orm, "Uses")
 Rel(dao, dialect, "Asks for product differences")
 Rel(orm, dialect, "Selects from DB_URL")
 Rel(orm, db, "SQL", "JDBC")
+Rel(storage, orm, "jdbc:postgresql / jdbc:mysql")
+Rel(storage, mem, "memory:")
+Rel(fc, sso, "/sso/*")
+Rel(sso, auth, "authenticateExternal")
+Rel(sso, idp, "OIDC", "HTTPS")
 @enduml

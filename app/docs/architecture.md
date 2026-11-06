@@ -56,11 +56,24 @@ flowchart TB
     JDH --> ORM
 
     ORM -->|JDBC, parameterised SQL| DB[("PostgreSQL 16<br/>or MySQL 8.4")]
-    MEM[["InMemoryDAOFactory<br/>(DB_URL=memory:)"]]
+    MEM[["InMemoryDAOFactory + InMemoryTransactionAdapter<br/>(DB_URL=memory:)"]]
     DAO -.or implemented by.-> MEM
+    SF{{"StorageFactory<br/>chooses from DB_URL"}}
+    SF -->|jdbc:postgresql / jdbc:mysql| ORM
+    SF -->|memory:| MEM
 ```
 
-Layers organise the code; tiers are where it runs. In this demo all three layers run in one JVM (the application server) and the database (PostgreSQL by default, or MySQL) is the separate data node.
+Layers organise the code; tiers are where it runs. In this demo all three layers run in one JVM (the application server) and the database (PostgreSQL by default, or MySQL) is the separate data node; with `DB_URL=memory:` there is no data node.
+
+**Switching storage.** `DB_URL` is the only switch; nothing else changes and nothing is recompiled:
+
+| `DB_URL` | `Storage` | DAOs | Transactions | Health |
+|---|---|---|---|---|
+| `jdbc:postgresql://…` | `RelationalStorage` + `PostgresDialect` | `OrmDAOFactory` | `TransactionManagerAdapter` | `JdbcDatabaseHealthAdapter` |
+| `jdbc:mysql://…` | `RelationalStorage` + `MySqlDialect` | `OrmDAOFactory` | `TransactionManagerAdapter` | `JdbcDatabaseHealthAdapter` |
+| `memory:` | `InMemoryStorage` | `InMemoryDAOFactory` | `InMemoryTransactionAdapter` (lock + snapshot) | always UP |
+
+Any other value fails at start-up with the list of supported forms (decisions D17, D19 and D21).
 
 The business tier owns two small **ports** (`TransactionRunner`, `DatabaseHealth`). The persistence tier does not know them; two **adapters** outside both layers implement them using `TransactionManager`, and `App` (the composition root) wires them in. This is the Dependency Inversion Principle applied without breaking the "downward only" rule.
 
@@ -279,7 +292,7 @@ erDiagram
     JOB ||--o{ ALLOCATION : "allocated by"
     WORKER ||--o{ ALLOCATION : "holds"
     WORKER ||--o{ WORKER_SKILL : "has"
-    JOB ||--|{ JOB_SKILL : "requires"
+    JOB ||--o{ JOB_SKILL : "requires"
     SKILL ||--o{ WORKER_SKILL : "held by"
     SKILL ||--o{ JOB_SKILL : "needed by"
 ```

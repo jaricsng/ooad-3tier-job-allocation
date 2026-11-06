@@ -145,7 +145,7 @@ Shaped by what the screen shows, not by the tables. Carry the job version for op
 | Pre-conditions | Post-conditions |
 |---|---|
 | Job exists and status = PENDING | Allocation created (ACTIVE), linked to Job and Worker |
-| Worker has every required skill | `Job.status` = ALLOCATED; version incremented |
+| Worker has every skill the job requires (a job may require none) | `Job.status` = ALLOCATED; version incremented |
 | Remaining capacity ≥ job effort | Audit event JOB_ALLOCATED appended |
 | Actor holds the SUPERVISOR role | On any failure: no state change → 409 / 422 |
 | `jobVersion` matches the stored version | |
@@ -197,7 +197,7 @@ Worker owns capacity and assignment rules; `AllocationPolicy` is the variation p
 
 **Business**: `SecuredTransactionalProxy` provides `AllocationService` and delegates to `AllocationServiceImpl`; policies and events plug in through `AllocationPolicy` and `DomainEventListener`.
 
-**Persistence**: `DataAccess` provides the DAO interfaces; the mini ORM provides transactions; a `SqlDialect` covers product differences; JDBC talks to PostgreSQL (or MySQL) in Docker.
+**Persistence**: `DataAccess` provides the DAO interfaces; `StorageFactory` picks the storage from `DB_URL`: PostgreSQL or MySQL (mini ORM + `SqlDialect` + JDBC) or in-memory DAOs.
 
 Lollipop = provided interface · dashed arrow = required (`«use»`).
 
@@ -219,7 +219,7 @@ Three outcomes: 201 Created, 409 Conflict (stale version), 422 rule violation.
 
 ![bg right:38% contain](../diagrams/png/16-activity-allocate.png)
 
-Swimlanes follow the tiers: **Supervisor · Presentation · Business · Persistence**.
+Swimlanes (activity partitions) follow the tiers: **Supervisor · Presentation · Business · Persistence**. Each **decision** is an empty diamond; every outgoing flow carries a `[guard]` (the other one `[else]`).
 
 | Check | Fails with |
 |---|---|
@@ -261,7 +261,7 @@ On success: allocation saved → `JobAllocated` published → audit row written 
 
 **Tier 2**: `joballoc.jar` on the JVM, bound to `127.0.0.1:8080`
 
-**Tier 3**: PostgreSQL 16 (or MySQL 8.4) in Docker; data in a named volume
+**Tier 3**: PostgreSQL 16 or MySQL 8.4 in Docker, data in a named volume; with `DB_URL=memory:` no database node at all
 
 Configuration comes from environment variables, never from code.
 
@@ -285,7 +285,7 @@ Configuration comes from environment variables, never from code.
 |---|---|---|
 | Web browser | 1 · Presentation | HTML + CSS |
 | Web application | 2 · Business | Java 21, JDK HttpServer |
-| Database | 3 · Persistence | PostgreSQL 16 or MySQL 8.4 |
+| Database | 3 · Persistence | PostgreSQL 16 or MySQL 8.4; none with `memory:` |
 
 **Discuss:** why is the browser a tier but not a separate deployable?
 
@@ -448,7 +448,7 @@ class AllocationServiceImpl {
 }
 ```
 
-**After**: swap JDBC for in-memory in one place.
+**After**: one factory creates every DAO; `DB_URL` picks PostgreSQL, MySQL or in-memory (slide 44).
 
 > **Discuss:** Factory or DI container: what does each cost?
 
@@ -721,9 +721,9 @@ Enforced by `make lint` (form) and `NamingConventionTest` (role).
 ![bg right:52% contain](../diagrams/png/27-sql-dialect.png)
 
 - `DB_URL` prefix → **`DialectFactory`** → `PostgresDialect` or `MySqlDialect`
-- The **Strategy** holds only what really differs: scripts folder, duplicate-key code (23505 vs 1062), UTC session, first-rows clause
-- Everything else is **portable SQL**: `IN`, `EXISTS`, `CASE`, collection tables
-- Same 23 integration and 4 browser tests pass on **both**
+- **Strategy** = only what differs: scripts, duplicate-key code, UTC session, first-rows clause
+- The rest is **portable SQL**; the same 35 integration tests pass on **both**
+- `memory:` runs no SQL, so no dialect: `StorageFactory` picks it first (slide 44)
 
 ---
 
@@ -781,9 +781,11 @@ Same rule, product-specific mechanism: *one ACTIVE allocation per job* is a part
 
 ## Every gate is a command; every control leaves evidence
 
-![h:330](../diagrams/png/31-devsecops-gates.png)
+![bg right:50% contain](../diagrams/png/31-devsecops-gates.png)
 
-`make check`: tests, policies, **secrets**, **SAST**, governance · `make security`: + **SCA**, **DAST**, **pen test** · `make audit`: 17 controls → evidence pack
+- `make check` (pre-commit, CI): conventions, tests, policies, **secrets**, **SAST**, governance; stops at the first failure
+- `make security`: + **SCA**, **DAST** (OWASP ZAP), **pen test** (WSTG)
+- `make audit`: 17 controls → hashed evidence pack (ASVS, ISO 27001)
 
 ---
 
@@ -812,7 +814,7 @@ Frameworks: NIST AI RMF · ISO/IEC 42001 · OWASP Top 10 for LLM Apps · IMDA Mo
 | UI (View) | Output escaped; CSP `script-src 'none'`; CSRF token on every form | `WebUnitTest`; Playwright end-to-end (4 tests, incl. phone) |
 | UI Service | Session login, PBKDF2 passwords, lockout, login CSRF token, OIDC SSO; role check (`@RequiresRole`) in the proxy | `ApiSecurityIT`, `SsoIT`; `SecurityTest`, `IdTokenVerifierTest` |
 | Business / Domain | Rules inside `Worker` and `Job`; transaction per facade call | `WorkerTest`, `JobTest`, `AllocationServiceTest`, `PolicyTest` |
-| Persistence (DAO) | Parameterised SQL; optimistic locking; append-only audit trigger | `PersistenceIT` against real PostgreSQL **and** MySQL test databases |
+| Persistence (DAO) | Parameterised SQL; optimistic locking; append-only audit trigger; storage chosen by `DB_URL` | `PersistenceIT` on PostgreSQL **and** MySQL; HTTP/API tests also on in-memory storage |
 | Architecture | Dependencies point downward only; ports and adapters | `ArchitectureTest` (fails the build on a violation) |
 | API | OpenAPI contract; Problem Details; idempotency; ETag | `OpenApiContractTest`, `ApiIntegrationPatternsIT` |
 
@@ -830,3 +832,4 @@ Whole app: secret-leak, SAST, SCA, DAST and pen-test gates; `make audit`. **Not 
 - **Assign**: GRASP decides who does the work; GoF patterns make it changeable.
 - **Verify**: contracts become tests; diagrams-as-code stay in sync with the code.
 - **Refactor**: name the anti-pattern first, then apply the pattern, and keep every gate green.
+- **Design for change**: one setting (`DB_URL`) switches PostgreSQL, MySQL or in-memory storage; no other code changes.

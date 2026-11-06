@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class GoF creational and structural patterns
 allowmixing
 hide empty members
 hide circle
@@ -23,32 +24,32 @@ usecase "Singleton" as SGL
 ' Declared bottom-up: with 'left to right direction' PlantUML stacks the LAST package on top,
 ' so the page reads Presentation (top), Business, Persistence (bottom).
 package "Persistence" {
-  interface DAOFactory
+  interface DAOFactory <<interface>>
   class OrmDAOFactory
   class InMemoryDAOFactory
-  interface JobDAO
+  interface JobDAO <<interface>>
   class OrmJobDAO
   class ConnectionPool
   class TransactionManager
   class DialectFactory
-  interface SqlDialect
+  interface SqlDialect <<interface>>
 }
 package "Adapters" {
   class TransactionManagerAdapter
 }
 package "Business" {
-  interface AllocationService
+  interface AllocationService <<interface>>
   class SecuredTransactionalProxy
   class AllocationServiceImpl
   class BusinessTier
   class PolicyFactory
-  interface AllocationPolicy
-  interface TransactionRunner
+  interface AllocationPolicy <<interface>>
+  interface TransactionRunner <<interface>>
 }
 package "Presentation" {
   class BoardController
   class ApiController
-  interface Handler
+  interface Handler <<interface>>
   class IdempotentHandler
   class HttpExchangeAdapter
   class "HttpExchange (JDK)" as HttpExchange

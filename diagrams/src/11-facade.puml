@@ -1,12 +1,13 @@
 @startuml
 !include style.iuml
+mainframe class Facade
 skinparam classAttributeIconSize 0
 hide empty members
 title Facade — as built (UML 2.5.1 class diagram)
 
 class BoardController <<client>>
 class ApiController <<client>>
-interface AllocationService <<facade>> {
+interface AllocationService <<interface>> <<facade>> {
   +loadBoard(criteria : JobCriteria, selectedJobId : String) : BoardData
   +findPendingJobs(criteria : JobCriteria) : List<Job>
   +findEligibleWorkers(jobId : String) : List<Candidate>
@@ -19,10 +20,10 @@ interface AllocationService <<facade>> {
 }
 package "Subsystem hidden behind the facade" {
   class AllocationServiceImpl
-  interface JobDAO
-  interface WorkerDAO
-  interface AllocationDAO
-  interface SkillDAO
+  interface JobDAO <<interface>>
+  interface WorkerDAO <<interface>>
+  interface AllocationDAO <<interface>>
+  interface SkillDAO <<interface>>
   class PolicyFactory
   class DomainEventPublisher
   class Worker

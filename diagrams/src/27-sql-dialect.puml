@@ -1,10 +1,11 @@
 @startuml
 !include style.iuml
+mainframe class SQL dialects
 skinparam classAttributeIconSize 0
 hide empty members
 title Strategy + Factory for database products — as built (UML 2.5.1 class diagram)
 
-interface SqlDialect <<strategy>> {
+interface SqlDialect <<interface>> <<strategy>> {
   +productName() : String
   +migrationFolder() : String
   +connectionProperties() : Properties
@@ -32,7 +33,7 @@ class ConnectionPool <<singleton>> {
 class TransactionManager {
   +dialect() : SqlDialect
 }
-abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template>> {
+abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template method>> {
   #dialect : SqlDialect
 }
 class OrmAuditDAO
@@ -41,7 +42,7 @@ class Migrator {
   +{static} statements(script : String) : List<String>
 }
 class JdbcDatabaseHealthAdapter <<adapter>>
-enum Setting <<configuration>> {
+enum Setting <<enumeration>> <<configuration>> {
   DB_URL
 }
 
@@ -65,6 +66,13 @@ note right of SqlDialect
   Add Oracle = OracleDialect + one entry in
   DialectFactory + db/migration/oracle/ scripts
   + the integration tests run against it.
+end note
+note left of DialectFactory
+  <b>Why no in-memory dialect?</b>
+  DB_URL=memory: runs no SQL, so it needs no SqlDialect.
+  StorageFactory picks in-memory storage one level up,
+  before any dialect is chosen (diagram 28);
+  DialectFactory refuses memory: by design.
 end note
 note bottom of Migrator
   db/migration/<folder>/V1, V2, V3 …

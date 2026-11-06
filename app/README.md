@@ -8,7 +8,7 @@ It is written in **plain Java 21 with no frameworks**. The web server, ORM, tran
 |---|---|---|
 | Presentation (UI Service) | `edu.ooad.joballoc.web` | Front controller, router, sessions, CSRF, server-rendered responsive views (Bootstrap 5.3 CSS, no JavaScript), REST API `/api/v1`, DTOs |
 | Business | `edu.ooad.joballoc.business`, `edu.ooad.joballoc.domain` | `AllocationService` facade, service implementation, policies, events, security; rich domain model |
-| Persistence | `edu.ooad.joballoc.persistence` | Annotation-based ORM, connection pool, transactions, migrations, DAO interfaces and implementations |
+| Persistence | `edu.ooad.joballoc.persistence`, `edu.ooad.joballoc.storage` | DAO interfaces; storage chosen by `DB_URL`: PostgreSQL or MySQL (annotation-based ORM, SQL dialects, connection pool, transactions, migrations) or in-memory DAOs |
 
 ## Quick start
 
@@ -23,13 +23,15 @@ No Docker? Install PostgreSQL 14+ locally and run `make db-setup` once instead.
 
 **No Docker at all:** `make run-memory` runs the app on in-memory storage (data is lost when it stops).
 
+**Single sign-on (optional):** a fresh clone or fork shows only the password form, because no identity provider is configured. To add **Sign in with Google / Microsoft**, register your own OAuth client with each provider and put its id in `.env` (the secret preferably in the macOS Keychain): [`docs/sso.md` → Try it on your laptop](docs/sso.md#try-it-on-your-laptop-step-by-step). Apple needs a deployed HTTPS site.
+
 **MySQL instead of PostgreSQL:** `make db-up-mysql` then `make run-mysql`. The `DB_URL` value (`jdbc:postgresql://`, `jdbc:mysql://` or `memory:`) selects the storage and, for SQL, the dialect; the code, tests and UI are the same ([runbook §11](docs/runbook.md#11-running-on-mysql)).
 
 | Command | What it does |
 |---|---|
-| `make test` | 80 unit tests: domain rules, policies, service contracts, proxy chain, security, HTTP layer, Singleton, configuration, OpenAPI contract, architecture and naming rules, pinned UI assets and CSP-safe views, SQL dialects, migration splitting, in-memory storage (rollback, thread safety, seed drift), data copy, ID-token verification, SSO account linking (no database) |
-| `make test-int` | 34 integration tests against PostgreSQL: ORM, optimistic locking, append-only audit, migration checksums, data copy, HTTP API, OWASP checks, login CSRF, SSO against a test identity provider |
-| `make test-int-mysql` / `test-int-memory` / `test-int-all` | The same tests on MySQL (34) / in memory (22, SQL-only tests skipped) / on all three |
+| `make test` | 87 unit tests: domain rules, policies, service contracts, proxy chain, security, HTTP layer, Singleton, configuration, OpenAPI contract, architecture and naming rules, pinned UI assets and CSP-safe views, SQL dialects, migration splitting, in-memory storage (rollback, thread safety, seed drift), data copy, ID-token verification, SSO account linking (no database) |
+| `make test-int` | 35 integration tests against PostgreSQL: ORM, optimistic locking, append-only audit, migration checksums, data copy, HTTP API, OWASP checks, login CSRF, SSO against a test identity provider |
+| `make test-int-mysql` / `test-int-memory` / `test-int-all` | The same tests on MySQL (35) / in memory (22, SQL-only tests skipped) / on all three |
 | `make e2e` | 4 Playwright browser tests in Chrome, including a 390 px phone viewport (starts and stops the app itself) |
 | `make check` | Quality gate without a database: Checkstyle conventions, unit tests, Rego policies, OpenAPI lint, secret-leak scan, SAST, governance (run before every commit) |
 | `make lint` / `make policy` / `make api-lint` | Coding conventions / policy as code / OpenAPI lint (`make tools` fetches the pinned tools first; Spectral needs Node.js) |

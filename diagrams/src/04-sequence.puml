@@ -1,12 +1,13 @@
 @startuml
 !include style.iuml
+mainframe sd Allocate Job
 hide footbox
 title Allocate Job — Sequence Diagram (UML 2.5.1, as built after refactoring)
 actor ":Supervisor" as Supervisor
 boundary ":BoardView" as V
 control ":FrontController" as FC
 control ":BoardController" as BC
-participant ":SecuredTransactionalProxy" as PX <<AllocationService>>
+participant ":SecuredTransactionalProxy" as PX
 participant ":AllocationServiceImpl" as S
 participant ":OrmJobDAO" as JD
 participant ":OrmWorkerDAO" as WD
@@ -17,7 +18,7 @@ participant ":DomainEventPublisher" as EP
 participant ":AuditListener" as AL
 participant ":Database\n(PostgreSQL or MySQL)" as DB <<database>>
 
-Supervisor -> V : click [Allocate]
+Supervisor ->> V : click Allocate
 V -> FC : POST /board/allocate\n(jobId, workerId, jobVersion, _csrf)
 FC -> FC : (via HttpExchangeAdapter)\nresolve session → Actor, check CSRF,\nassign X-Request-Id
 FC -> BC : allocate(request)
@@ -27,47 +28,58 @@ PX -> DB : TransactionInterceptor: BEGIN
 PX -> S : allocate(jobId, workerId, jobVersion)
 S -> JD : findById(jobId)
 JD -> DB : SELECT … FROM job WHERE job_id = ?
-JD --> S : job
+JD -->> S : job
 alt job.version != jobVersion
-  S --> PX : ConcurrencyConflictException
+  S -->> PX : ConcurrencyConflictException
   PX -> DB : ROLLBACK
-  PX --> BC : 409
-  BC --> V : 303 /board?err=…changed by someone else
+  PX -->> BC : 409
+  BC -->> V : 303 /board?err=…changed by someone else
 else else
   S -> WD : findWithAllocations(workerId, job.workDate)
   WD -> DB : SELECT worker; SELECT active allocations
-  WD --> S : worker (+ allocations)
+  WD -->> S : worker (+ allocations)
   S -> W : assign(job, actor, now)
   W -> J : isAllocatable()
   W -> W : hasAllSkills() and remainingCapacity() >= effort
   alt rule violated
-    W --> S : AllocationRuleException
-    S --> PX : (propagates)
+    W -->> S : AllocationRuleException
+    S -->> PX : (propagates)
     PX -> DB : ROLLBACK
-    PX --> BC : 422
-    BC --> V : 303 /board?err=<reason>
+    PX -->> BC : 422
+    BC -->> V : 303 /board?err=<reason>
   else else
     W -> J : markAllocated()
-    W --> S : allocation (+ JobAllocated event)
+    W -->> S : allocation (+ JobAllocated event)
     S -> AD : save(allocation)
     S -> JD : update(job)  — WHERE version = ?
     S -> WD : update(worker)  — WHERE version = ?
     alt row changed meanwhile
-      JD --> S : OptimisticLockException\n(persistence.dao)
-      S --> PX : (propagates)
+      JD -->> S : OptimisticLockException\n(persistence.dao)
+      S -->> PX : (propagates)
       PX -> DB : ROLLBACK
       PX -> PX : ExceptionTranslationInterceptor:\n→ ConcurrencyConflictException
-      PX --> BC : 409
-      BC --> V : 303 /board?err=…refresh and retry
+      PX -->> BC : 409
+      BC -->> V : 303 /board?err=…refresh and retry
     else else
       S -> EP : publishAll(worker.pullEvents())
       EP -> AL : on(JobAllocated)
       AL -> DB : INSERT INTO audit_event
-      S --> PX : allocation
+      S -->> PX : allocation
       PX -> DB : COMMIT
-      PX --> BC : allocation
-      BC --> V : 303 /board?msg=Allocated…
+      PX -->> BC : allocation
+      BC -->> V : 303 /board?msg=Allocated…
     end
   end
 end
+note over JD, DB
+  Same messages on every storage. With DB_URL=memory: the DAOs are in-memory
+  (InMemoryDAOFactory), BEGIN/COMMIT/ROLLBACK become lock + snapshot/restore
+  (InMemoryTransactionAdapter), and the :Database lifeline is not used.
+end note
+legend top left
+  <b>UML 2.5.1 message notation</b>
+  solid line, filled arrowhead: synchronous call
+  solid line, open arrowhead: asynchronous signal (user gesture)
+  dashed line, open arrowhead: reply (return value or exception)
+endlegend
 @enduml

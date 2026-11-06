@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Job Allocation (all three tiers)
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 hide empty members
@@ -40,7 +41,7 @@ package "Presentation tier — web" as ui {
 }
 
 package "Business tier — business, domain" as biz {
-  interface AllocationService <<facade>> {
+  interface AllocationService <<interface>> <<facade>> {
     +loadBoard(criteria : JobCriteria, selectedJobId : String) : BoardData
     +findEligibleWorkers(jobId : String) : List<Candidate>
     +allocate(jobId : String, workerId : String, jobVersion : long) : Allocation
@@ -48,7 +49,7 @@ package "Business tier — business, domain" as biz {
     +unassign(allocationId : String) : void
   }
   class AllocationServiceImpl <<service>>
-  interface AllocationPolicy <<strategy>> {
+  interface AllocationPolicy <<interface>> <<strategy>> {
     +order(job : Job) : Comparator<Worker>
     +rank(job : Job, eligible : List<Worker>) : List<Worker>
   }
@@ -95,20 +96,20 @@ package "Business tier — business, domain" as biz {
 }
 
 package "Persistence tier — persistence" as dao {
-  interface "GenericDAO<T, ID>" as GenericDAO {
+  interface "GenericDAO<T, ID>" as GenericDAO <<interface>> {
     +findById(id : ID) : Optional<T>
     +findByIds(ids : Collection<ID>) : List<T>
     +save(entity : T) : void
     +update(entity : T) : void
   }
-  interface JobDAO {
+  interface JobDAO <<interface>> {
     +findPending(criteria : JobCriteria) : List<Job>
   }
-  interface WorkerDAO {
+  interface WorkerDAO <<interface>> {
     +findWithAllocations(workerId : String, on : LocalDate) : Optional<Worker>
     +findAllWithAllocations(on : LocalDate) : List<Worker>
   }
-  interface AllocationDAO {
+  interface AllocationDAO <<interface>> {
     +findActiveByDate(on : LocalDate) : List<Allocation>
   }
   class OrmJobDAO

@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Strategy
 skinparam classAttributeIconSize 0
 hide empty members
 left to right direction
@@ -9,7 +10,7 @@ class AllocationServiceImpl <<context>> {
   +autoAllocate(jobIds : List<String>, policyName : String) : List<AutoAllocationResult>
   -candidatesFor(job : Job) : List<Candidate>
 }
-interface AllocationPolicy <<strategy>> {
+interface AllocationPolicy <<interface>> <<strategy>> {
   +name() : String
   +order(job : Job) : Comparator<Worker>
   +rank(job : Job, eligible : List<Worker>) : List<Worker> {default}

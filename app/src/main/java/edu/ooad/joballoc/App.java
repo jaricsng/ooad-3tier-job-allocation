@@ -12,6 +12,7 @@ import edu.ooad.joballoc.web.WebServer;
 import edu.ooad.joballoc.web.sso.OidcProviders;
 import edu.ooad.joballoc.web.sso.SsoService;
 
+import java.net.BindException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.util.Map;
@@ -24,6 +25,9 @@ import java.util.logging.Logger;
  */
 public final class App {
 
+    /** Exit status when the HTTP port is taken (distinct from a crash, for scripts). */
+    static final int EXIT_PORT_IN_USE = 3;
+
     private static final Logger LOG = Logger.getLogger(App.class.getName());
 
     /** The running application (used by main and by integration tests). */
@@ -34,13 +38,31 @@ public final class App {
         }
     }
 
+    /** The HTTP port is already taken: a clear message instead of a stack trace. */
+    static final class PortInUseException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        PortInUseException(String bind, int port, BindException cause) {
+            super("Port " + port + " on " + bind + " is already in use, probably by another copy of this app."
+                    + " Stop it (Ctrl-C in its terminal; find it with: lsof -nP -iTCP:" + port + " -sTCP:LISTEN),"
+                    + " or use another port, e.g. APP_PORT=" + (port + 1) + " in .env", cause);
+        }
+    }
+
     private App() { }
 
     public static void main(String[] args) throws Exception {
         System.setProperty("java.util.logging.SimpleFormatter.format", "%1$tFT%1$tT %4$s %3$s - %5$s%6$s%n");
         AppConfig config = AppConfig.fromEnv();
         LOG.info(() -> "Starting Job Allocation " + AppConfig.VERSION + " with " + config);
-        Running app = start(config, Clock.systemDefaultZone());
+        Running app;
+        try {
+            app = start(config, Clock.systemDefaultZone());
+        } catch (PortInUseException e) {
+            LOG.severe(e.getMessage());
+            System.exit(EXIT_PORT_IN_USE);
+            return;
+        }
         Runtime.getRuntime().addShutdownHook(new Thread(app::stop));
         LOG.info(() -> "Listening on http://" + config.bindAddress() + ":" + app.web().port() + "/");
     }
@@ -64,9 +86,15 @@ public final class App {
         SsoService ssoService = new SsoService(OidcProviders.fromSettings(sso), sso.get("SSO_BASE_URL"), clock);
         AuthService.Provisioning provisioning = "viewer".equals(sso.get("SSO_AUTO_PROVISION"))
                 ? AuthService.Provisioning.VIEWER : AuthService.Provisioning.NONE;
-        WebServer web = new WebServer(config.bindAddress(), config.port(), business,
-                storage.health(), clock,
-                config.cookieSecure(), AppConfig.VERSION, ssoService, provisioning);
+        WebServer web;
+        try {
+            web = new WebServer(config.bindAddress(), config.port(), business,
+                    storage.health(), clock,
+                    config.cookieSecure(), AppConfig.VERSION, ssoService, provisioning);
+        } catch (BindException e) {
+            storage.close();
+            throw new PortInUseException(config.bindAddress(), config.port(), e);
+        }
         web.start();
         return new Running(web, business.service(), storage, daos);
     }

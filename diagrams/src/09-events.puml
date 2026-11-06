@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Observer
 skinparam classAttributeIconSize 0
 hide empty members
 left to right direction
@@ -8,7 +9,7 @@ class Worker <<entity>> {
   +assign(job, actor, now) : Allocation
   +pullEvents() : List<DomainEvent>
 }
-interface DomainEvent {
+interface DomainEvent <<interface>> {
   +type() : String
   +entityId() : String
 }
@@ -26,7 +27,7 @@ class DomainEventPublisher <<subject>> {
   +publish(e : DomainEvent) : void
   +publishAll(es : List<DomainEvent>) : void
 }
-interface DomainEventListener <<observer>> {
+interface DomainEventListener <<interface>> <<observer>> {
   +on(e : DomainEvent) : void
 }
 class AuditListener {

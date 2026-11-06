@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class ECB analysis classes
 left to right direction
 actor Supervisor
 boundary "AllocationBoardView" as B1

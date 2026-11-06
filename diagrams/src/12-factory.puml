@@ -1,9 +1,10 @@
 @startuml
 !include style.iuml
+mainframe class Abstract Factory
 skinparam classAttributeIconSize 0
 hide empty members
 title Abstract Factory — as built (UML 2.5.1 class diagram)
-interface DAOFactory <<abstract factory>> {
+interface DAOFactory <<interface>> <<abstract factory>> {
   +jobDao() : JobDAO
   +workerDao() : WorkerDAO
   +allocationDao() : AllocationDAO
@@ -15,7 +16,7 @@ class OrmDAOFactory {
   +OrmDAOFactory(tx : TransactionManager)
 }
 class InMemoryDAOFactory <<unit tests>>
-interface JobDAO
+interface JobDAO <<interface>>
 class OrmJobDAO
 class "InMemoryDAOFactory.MemJobDAO" as MemJobDAO
 class AllocationServiceImpl <<client>>

@@ -1,10 +1,11 @@
 @startuml
 !include style.iuml
+mainframe class SQL dialects
 skinparam classAttributeIconSize 0
 hide empty members
 title Strategy + Factory for database products — as built (UML 2.5.1 class diagram)
 
-interface SqlDialect <<strategy>> {
+interface SqlDialect <<interface>> <<strategy>> {
   +productName() : String
   +migrationFolder() : String
   +connectionProperties() : Properties
@@ -32,7 +33,7 @@ class ConnectionPool <<singleton>> {
 class TransactionManager {
   +dialect() : SqlDialect
 }
-abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template>> {
+abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template method>> {
   #dialect : SqlDialect
 }
 class OrmAuditDAO
@@ -41,7 +42,7 @@ class Migrator {
   +{static} statements(script : String) : List<String>
 }
 class JdbcDatabaseHealthAdapter <<adapter>>
-enum Setting <<configuration>> {
+enum Setting <<enumeration>> <<configuration>> {
   DB_URL
 }
 

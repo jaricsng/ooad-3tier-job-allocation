@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe sd Single sign-on
 autonumber
 title Single sign-on (OpenID Connect, authorization code + PKCE) — UML 2.5.1 sequence diagram, as built
 
@@ -15,37 +16,42 @@ box "Business tier" #FFF6E5
 end box
 participant "Identity provider\n(Google / Microsoft / Apple / OIDC)" as P
 
-U -> B : click "Sign in with Google"
+U ->> B : click "Sign in with Google"
 B -> C : GET /sso/google
 C -> S : start(provider)
 S -> S : new state, nonce, PKCE verifier\n(server-side, 10 min, single use)
 S -> P : GET /.well-known/openid-configuration\n(first use only; HTTPS required)
-S --> C : authorization URL
-C --> B : 303 Location: provider\nSet-Cookie: JA_SSO=state (HttpOnly)
+S -->> C : authorization URL
+C -->> B : 303 Location: provider\nSet-Cookie: JA_SSO=state (HttpOnly)
 B -> P : authorize(client_id, redirect_uri, state, nonce,\ncode_challenge S256)
-U -> P : sign in, consent
-P --> B : 302 redirect_uri?code&state\n(Apple: form_post)
+U ->> P : sign in, consent
+P -->> B : 302 redirect_uri?code&state\n(Apple: form_post)
 B -> C : GET|POST /sso/google/callback\n+ cookie JA_SSO
 C -> S : callback(state, cookie, code)
 alt state unknown, used, expired, or cookie mismatch
-  S --> C : SsoException (login CSRF / replay)
-  C --> B : 303 /login?sso=failed
+  S -->> C : SsoException (login CSRF / replay)
+  C -->> B : 303 /login?sso=failed
 else state valid
   S -> P : POST token endpoint\n(code, code_verifier, client secret)
-  P --> S : ID token (JWT, RS256/ES256)
+  P -->> S : ID token (JWT, RS256/ES256)
   S -> P : GET JWKS (cached; refetched on unknown kid)
   S -> V : verify(token, keys, issuer, client id, nonce)
   V -> V : alg in {RS256, ES256}; signature;\niss, aud, exp, iat, nonce
-  V --> S : verified claims
-  S --> C : ExternalIdentity(provider, sub, email, verified)
+  V -->> S : verified claims
+  S -->> C : ExternalIdentity(provider, sub, email, verified)
   C -> A : authenticateExternal(identity, provisioning)
   A -> A : verified email -> linked account\n(role from this app; unknown -> deny or Viewer)
   alt account found or provisioned
-    A --> C : Actor
-    C --> B : 303 /board + Set-Cookie: JA_SESSION
+    A -->> C : Actor
+    C -->> B : 303 /board + Set-Cookie: JA_SESSION
   else no account / unverified email
-    A --> C : empty
-    C --> B : 303 /login?sso=failed
+    A -->> C : empty
+    C -->> B : 303 /login?sso=failed
   end
 end
+note across
+  Message numbers are a reading aid for class discussion only. UML 2.5.1 orders the messages
+  of a sequence diagram by their vertical position, so sequence numbers are not required
+  (numbered sequence expressions belong to communication diagrams).
+end note
 @enduml

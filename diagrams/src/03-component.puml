@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe cmp Job Allocation
 skinparam componentStyle uml2
 title Job Allocation — Component Diagram (UML 2.5.1, as built after refactoring)
 

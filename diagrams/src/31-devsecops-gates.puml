@@ -4,6 +4,7 @@ skinparam activityBackgroundColor #F3F6FA
 skinparam activityBorderColor #1E4E8C
 skinparam activityDiamondBackgroundColor #FFF6E5
 skinparam activityDiamondBorderColor #D9822B
+mainframe act DevSecOps gates
 title DevSecOps gates, governance and audit as code — UML 2.5.1 activity diagram
 
 |Developer (with or without an AI assistant)|
@@ -11,44 +12,38 @@ start
 :change code, tests, docs;
 :human review checklist\n(docs/ai-assisted-engineering.md §4);
 |make check (pre-commit hook)|
-fork
-  :lint\n(conventions, naming);
-fork again
-  :unit + architecture tests;
-fork again
-  :policy as code\n(compose, config, access);
-fork again
-  :API contract lint;
-fork again
-  :secrets\n(Gitleaks + self-test);
-fork again
-  :SAST\n(Semgrep rules + rule tests);
-fork again
-  :governance\n(SBOM, pins, licences, files);
-end fork
-if (all pass?) then (no)
+:lint\n(conventions, naming);
+:unit + architecture tests;
+:policy as code\n(compose, config, access);
+:API contract lint;
+:secrets\n(Gitleaks + self-test);
+:SAST\n(Semgrep rules + rule tests);
+:governance\n(SBOM, pins, licences, files);
+note right
+  make runs the gates in this order
+  and stops at the first failure
+end note
+if () then ([a gate failed])
   |Developer (with or without an AI assistant)|
   :fix the cause\n(no silent suppression);
   stop
-else (yes)
+else ([else])
 endif
 |make security / make audit|
-fork
-  :integration tests\nPostgreSQL, MySQL, memory;
-fork again
-  :browser tests;
-fork again
-  :SCA (OSV)\nHIGH/CRITICAL blocks;
-fork again
-  :DAST (OWASP ZAP)\nHigh blocks;
-fork again
-  :pen test\n(OWASP WSTG probes);
-end fork
+:integration tests\nPostgreSQL, MySQL, memory;
+:browser tests;
+:SCA (OSV)\nHIGH/CRITICAL blocks;
+:DAST (OWASP ZAP)\nHigh blocks;
+:pen test\n(OWASP WSTG probes);
+note right
+  make audit runs every control,
+  records each result, then decides
+end note
 :evidence pack\nreport.md, results.json, logs,\nevidence, MANIFEST.sha256;
-if (every control passed?) then (yes)
+if () then ([every control passed])
   :release (runbook §10);
   stop
-else (no)
+else ([else])
   :record finding; fix or\naccept with reason + expiry;
   stop
 endif

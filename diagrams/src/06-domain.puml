@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe class Domain model
 skinparam classAttributeIconSize 0
 hide empty members
 left to right direction
@@ -37,19 +38,19 @@ class Skill <<valueObject>> {
   -code : String
   -name : String
 }
-enum JobStatus {
+enum JobStatus <<enumeration>> {
   PENDING
   ALLOCATED
   IN_PROGRESS
   DONE
   CANCELLED
 }
-enum AllocationStatus {
+enum AllocationStatus <<enumeration>> {
   ACTIVE
   RELEASED
   COMPLETED
 }
-interface AllocationPolicy <<strategy>> {
+interface AllocationPolicy <<interface>> <<strategy>> {
   +order(job : Job) : Comparator<Worker>
   +rank(job : Job, eligible : List<Worker>) : List<Worker>
 }

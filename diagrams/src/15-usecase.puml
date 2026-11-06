@@ -1,5 +1,6 @@
 @startuml
 !include style.iuml
+mainframe uc Job Allocation System
 skinparam usecaseBackgroundColor #F3F6FA
 skinparam usecaseBorderColor #1E4E8C
 skinparam packageStyle rectangle
@@ -15,7 +16,7 @@ actor "Viewer" as V
 actor "Supervisor" as S
 
 rectangle "Job Allocation System" {
-  package "Browse the board (Viewer)" as P_VIEW {
+  together {
     ' Declaration order chosen so Graphviz draws them in workflow order:
     ' Sign in, View pending jobs, View eligible workers, View allocations, Sign out.
     usecase "View allocations" as UC_LIST
@@ -24,13 +25,13 @@ rectangle "Job Allocation System" {
     usecase "View pending jobs" as UC_JOBS
     usecase "View eligible workers" as UC_ELIG
   }
-  package "Change allocations (Supervisor)" as P_CHANGE {
+  together {
     usecase "Allocate job\n--\nextension points\nstale version" as UC_ALLOC
     usecase "Auto-allocate jobs" as UC_AUTO
     usecase "Unassign allocation" as UC_UN
     usecase "Refresh after\nconcurrent change" as UC_CONFLICT
   }
-  package "Shared behaviour (included)" as P_SHARED {
+  together {
     usecase "Rank workers" as UC_RANK
     usecase "Check eligibility" as UC_CHECK
     usecase "Record audit event" as UC_AUDIT
@@ -56,7 +57,8 @@ UC_ALLOC ..> UC_CHECK : <<include>>
 UC_ALLOC ..> UC_AUDIT : <<include>>
 UC_UN ..> UC_AUDIT : <<include>>
 UC_ALLOC <.. UC_CONFLICT : <<extend>>
-
+' UML 2.5.1 attaches this comment to the «extend» relationship; PlantUML cannot anchor a note to a link,
+' so it is anchored to the extending use case and says which relationship it describes.
 note bottom of UC_CONFLICT
   «extend» Allocate job at "stale version"
   condition: {job or worker version changed

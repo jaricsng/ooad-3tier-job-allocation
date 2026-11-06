@@ -92,6 +92,24 @@ Never edit files in `build/`, `diagrams/png/` or `diagrams/svg/` by hand.
 
 C4 diagrams use the C4-PlantUML standard library (`!include <C4/...>`), bundled with PlantUML 1.2023 and later.
 
+## UML 2.5.1 notation used
+
+All diagrams except 01 (wireframe), 20–22 (C4), 24 (generated context diagram) and 26 (database schema, Information Engineering crow's-foot notation) follow the [OMG UML 2.5.1](https://www.omg.org/spec/UML/2.5.1/PDF) notation. PlantUML's defaults are adjusted in `diagrams/src/style.iuml` where they differ from the standard:
+
+| Element | UML 2.5.1 notation used here | PlantUML default replaced |
+|---|---|---|
+| Diagram frame | Every UML diagram is framed with its heading kind: `act`, `class`, `cmp`, `dep`, `pkg`, `sd`, `uc` | No frame |
+| Decision / merge node (activity) | Empty diamond; each outgoing flow carries a guard in square brackets, the remaining one `[else]` | Hexagon holding the question |
+| Concurrency (activity) | Fork/join bars only where flows really run in parallel; `make` gates are drawn in sequence because they run in sequence | — |
+| Interface, enumeration | Keywords `«interface»`, `«enumeration»` above the name; pattern roles as extra stereotypes (`«strategy»`) | Coloured circles with I / E / C / A |
+| Visibility | `+` public, `-` private, `#` protected, `~` package | Coloured icons |
+| Template (generic) class | Template parameters in a dashed box at the top right (`GenericDAO<T, ID>`) | — |
+| Use case | Subject rectangle holds the use cases directly; `«include»` / `«extend»` dashed arrows; extension points compartment | Packages nested in the subject |
+| Deployment | Communication paths as solid lines; `«device»`, `«executionEnvironment»`, artifacts with `«executable»` / `«library»` / `«file»` | — |
+| Sequence messages | Synchronous call: solid line, filled arrowhead. Asynchronous signal (user gestures): solid line, open arrowhead. Reply (return value or exception): dashed line, open arrowhead. `sd` frame; `alt` fragments with `[guard]` / `[else]`. Message numbers (diagram 30) are a reading aid only: UML 2.5.1 orders messages by vertical position and does not require numbering | Replies drawn with a filled arrowhead; user gestures drawn as synchronous calls |
+
+Two profile-based conventions remain, both permitted by UML's extension mechanism: the robustness (ECB) lifeline icons in the sequence diagrams and in diagram 10, and pattern-role stereotypes such as `«strategy»` or `«facade»`. PlantUML cannot anchor a comment to an `«extend»` relationship, so the condition note in diagram 15 is attached to the extending use case and says which relationship it describes.
+
 ## Building the outputs
 
 Run all commands from this folder (`3-tier-job-allocation`).

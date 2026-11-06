@@ -219,7 +219,7 @@ Three outcomes: 201 Created, 409 Conflict (stale version), 422 rule violation.
 
 ![bg right:38% contain](../diagrams/png/16-activity-allocate.png)
 
-Swimlanes follow the tiers: **Supervisor · Presentation · Business · Persistence**.
+Swimlanes (activity partitions) follow the tiers: **Supervisor · Presentation · Business · Persistence**. Each **decision** is an empty diamond; every outgoing flow carries a `[guard]` (the other one `[else]`).
 
 | Check | Fails with |
 |---|---|
@@ -781,9 +781,11 @@ Same rule, product-specific mechanism: *one ACTIVE allocation per job* is a part
 
 ## Every gate is a command; every control leaves evidence
 
-![h:330](../diagrams/png/31-devsecops-gates.png)
+![bg right:50% contain](../diagrams/png/31-devsecops-gates.png)
 
-`make check`: tests, policies, **secrets**, **SAST**, governance · `make security`: + **SCA**, **DAST**, **pen test** · `make audit`: 17 controls → evidence pack
+- `make check` (pre-commit, CI): conventions, tests, policies, **secrets**, **SAST**, governance; stops at the first failure
+- `make security`: + **SCA**, **DAST** (OWASP ZAP), **pen test** (WSTG)
+- `make audit`: 17 controls → hashed evidence pack (ASVS, ISO 27001)
 
 ---
 

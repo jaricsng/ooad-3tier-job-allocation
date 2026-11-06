@@ -117,6 +117,7 @@ Avoid names that say nothing: `Manager`, `Helper`, `Util`, `Data`, `Info`, `Proc
 | Security | `SecureRandom` for tokens; parameterised SQL only; validate input at the boundary (DTOs, `Request` helpers) | `noInsecureRandom`, `PersistenceIT` |
 | Null | Return `Optional` or an empty collection rather than `null` from finders | review |
 | Time | Inject `Clock`; never call `LocalDate.now()` without one (testable time) | review |
+| Language features | Use `instanceof` patterns, not pattern-matching `switch` (`case Type t ->`, record patterns): Semgrep's Java parser cannot read them, and an unparsable file is silently left out of SAST | `make sast` (fails on any parse error: "SAST blind spot") |
 
 ## 4. Comments and Javadoc
 

@@ -245,9 +245,18 @@ Passwords must be at least 12 characters. Restarting the app is not needed.
 
 1. Register the app with each provider ([`docs/sso.md`](sso.md#registering-the-app-with-each-provider)). The redirect URI is `<SSO_BASE_URL>/sso/<provider>/callback`.
 2. Set `SSO_BASE_URL` (HTTPS in production, policy P9) and the provider settings (`SSO_GOOGLE_CLIENT_ID`, `SSO_MICROSOFT_TENANT`, `SSO_APPLE_PRIVATE_KEY_FILE`…). Client secrets and the Apple key come from the secret store, never from a committed file (policy P9, Gitleaks).
-3. Give each person who should use SSO an e-mail address on their account: `update app_user set email = 'name@example.org' where username = '…';` (migration V4 adds the column). Leave `SSO_AUTO_PROVISION=false` unless new viewers may sign themselves in.
+3. Give each person who should use SSO an e-mail address on their account: `update app_user set email = 'name@example.org' where username = '…';` (migration V4 adds the column). Leave `SSO_AUTO_PROVISION=none` unless new viewers may sign themselves in (`viewer`).
 4. Restart and check that the sign-in page shows the buttons. The log shows `SSO sign-in` lines per provider; `SSO failed` lines give the reason (state, nonce, signature, issuer, audience, unverified e-mail).
 5. Rotate the Apple client-secret key and Google/Microsoft client secrets on the providers' schedule (Microsoft secrets expire; at most 24 months).
+
+**On a laptop (local testing).** Google and Microsoft accept `http://127.0.0.1:8080` as a redirect for local testing; Apple does not (HTTPS and a verified domain only). Step-by-step: [`docs/sso.md`](sso.md#try-it-on-your-laptop-step-by-step). Where the client **secret** lives on a laptop:
+
+| Option | How | Notes |
+|---|---|---|
+| **macOS Keychain (recommended)** | Store once: `security add-generic-password -a "$USER" -s joballoc-sso-google -w` (prompts for the secret; nothing on screen or in shell history). Before `make run`: `export SSO_GOOGLE_CLIENT_SECRET="$(security find-generic-password -a "$USER" -s joballoc-sso-google -w)"` | Encrypted at rest, never in a file or in the project folder; the client **id** (not secret) can stay in `app/.env`. Do not also put an `SSO_GOOGLE_CLIENT_SECRET=` line in `.env`: it would override the Keychain value |
+| `app/.env` | `SSO_GOOGLE_CLIENT_SECRET=…` in `app/.env`, then `chmod 600 .env` | Simpler. Git-ignored (cannot be committed) and skipped by the secret scan, but plain text on disk inside the project folder: never copy the folder or a backup of it to anyone |
+
+Never paste a secret into a chat, an issue, a commit message or a screenshot. If one leaks, delete it at the provider and create a new one.
 
 ## 10. Release and rollout
 

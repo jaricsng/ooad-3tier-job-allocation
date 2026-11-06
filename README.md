@@ -10,6 +10,7 @@ Teaching materials for a UI-driven object-oriented analysis and design (OOAD) wa
 |---|---|
 | [`app/README.md`](app/README.md) | Quick start, pattern-to-class map, security controls, test suites |
 | [`app/docs/architecture.md`](app/docs/architecture.md) | As-built Mermaid diagrams, traceability matrix, design decisions |
+| [`app/docs/sso.md`](app/docs/sso.md) | Single sign-on (Google, Microsoft, Apple): how it works, threat model, and how to enable it on your own clone or fork |
 | [`app/docs/user-guide.md`](app/docs/user-guide.md) | How supervisors and viewers use the board and the API |
 | [`app/docs/runbook.md`](app/docs/runbook.md) | Install, configure, operate, back up, troubleshoot |
 

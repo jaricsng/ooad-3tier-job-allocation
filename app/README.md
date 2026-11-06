@@ -23,6 +23,8 @@ No Docker? Install PostgreSQL 14+ locally and run `make db-setup` once instead.
 
 **No Docker at all:** `make run-memory` runs the app on in-memory storage (data is lost when it stops).
 
+**Single sign-on (optional):** a fresh clone or fork shows only the password form, because no identity provider is configured. To add **Sign in with Google / Microsoft**, register your own OAuth client with each provider and put its id in `.env` (the secret preferably in the macOS Keychain): [`docs/sso.md` → Try it on your laptop](docs/sso.md#try-it-on-your-laptop-step-by-step). Apple needs a deployed HTTPS site.
+
 **MySQL instead of PostgreSQL:** `make db-up-mysql` then `make run-mysql`. The `DB_URL` value (`jdbc:postgresql://`, `jdbc:mysql://` or `memory:`) selects the storage and, for SQL, the dialect; the code, tests and UI are the same ([runbook §11](docs/runbook.md#11-running-on-mysql)).
 
 | Command | What it does |

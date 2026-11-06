@@ -59,10 +59,12 @@ Providers are switched on by setting their client id. Client **secrets** are inj
 
 The sign-in page shows a provider's button only when that provider is configured, so with a fresh checkout you see the password form alone. To try single sign-on locally:
 
+> **Cloned or forked this repository?** Nothing here is pre-registered with Google, Microsoft or Apple, and no client id or secret is shipped (they would identify, and could be abused as, someone else's app). Register **your own** OAuth client with each provider, using the redirect URIs below (or your own host if you deploy elsewhere). Each person or team that runs the app owns its own registration.
+
 1. **Register the app** with Google and/or Microsoft (next section). Use these redirect URIs, which both providers accept over plain `http` because they are loopback addresses:
    - `http://127.0.0.1:8080/sso/google/callback`
    - `http://127.0.0.1:8080/sso/microsoft/callback`
-2. **Put the settings in `app/.env`** (git-ignored, read by `make run`, skipped by the secret scan, so real secrets may live there on your own laptop):
+2. **Put the settings in `app/.env`** (git-ignored, read by `make run`, skipped by the secret scan). The client **id** is not a secret. For the client **secret**, prefer the macOS Keychain (runbook §9.1, "On a laptop"); if you put it in `.env` instead, run `chmod 600 .env`:
 
    ```bash
    SSO_BASE_URL=http://127.0.0.1:8080

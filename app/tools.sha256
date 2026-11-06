@@ -1,0 +1,11 @@
+# Pinned build tools (supply-chain integrity): `make tools` downloads each file and checks this SHA-256.
+# To upgrade: change the version in the Makefile, download, verify upstream checksums, update the hash here.
+c0a521e54eabd1ece4ff7bd84cf231b012615745ed3aa4fb27ab0ca73097250c  checkstyle-14.4.0-all.jar
+a309853b5763c18486768157442d440248ee683b20a2aa1f6b28214e818bd780  conftest_0.71.1_Darwin_x86_64.tar.gz
+e1cc50d2590b6c5e3da6912666a71264bae82d60bdd62d7ae2b99971ccc8eedd  conftest_0.71.1_Darwin_arm64.tar.gz
+c3f6b2a753bd56e377a1e51a95ae3e057f926f2e9139f7d5b5dfbbaf810f7985  conftest_0.71.1_Linux_x86_64.tar.gz
+cad3de5dc9a4d5447d967a70a4d49499c557f04db028274cc324f9ff983f6502  gitleaks_8.21.2_darwin_arm64.tar.gz
+5b42c6e4b1fd693eaeb2b5b7faa5f17a1434299d4deb2de63d4b2efd7c753128  gitleaks_8.21.2_darwin_x64.tar.gz
+5bc41815076e6ed6ef8fbecc9d9b75bcae31f39029ceb55da08086315316e3ba  gitleaks_8.21.2_linux_x64.tar.gz
+654c935542c89f565aabe7bf7c6c500830f116c114f0aeb509d2460c1ac2e6da  gitleaks_8.21.2_linux_arm64.tar.gz
+94c8f767b1c2e94f0db66b3ae56514d5e3f5a728ee1b6c798e0c8fe2d61fbff0  ZAP_2.17.0_Crossplatform.zip

@@ -1,0 +1,109 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+title Storage family: Abstract Factory + Memento + Proxy — as built (UML 2.5.1 class diagram)
+
+class App <<composition root>>
+class StorageFactory <<factory method>> {
+  +{static} create(config : AppConfig) : Storage
+}
+interface Storage <<abstract factory>> {
+  +description() : String
+  +daos() : DAOFactory
+  +transactions() : TransactionRunner
+  +health() : DatabaseHealth
+  +close() : void
+}
+class RelationalStorage {
+  +RelationalStorage(pool : ConnectionPool)
+  +pool() : ConnectionPool
+}
+class InMemoryStorage
+class StorageTransfer {
+  +{static} copy(from : Storage, to : Storage) : Report
+}
+class DatabaseTool <<tool>> {
+  status | migrate | copy
+}
+
+package "business.port" {
+  interface TransactionRunner <<port>>
+  interface DatabaseHealth <<port>>
+}
+package "adapter" {
+  class TransactionManagerAdapter <<adapter>>
+  class InMemoryTransactionAdapter <<adapter>>
+  class JdbcDatabaseHealthAdapter <<adapter>>
+}
+package "persistence" {
+  interface DAOFactory <<abstract factory>>
+  class OrmDAOFactory
+  class InMemoryDAOFactory {
+    +inTransaction(work : Supplier<R>) : R
+    +withReferenceData() : InMemoryDAOFactory
+    -snapshot() : Snapshot
+    -restore(s : Snapshot) : void
+    -guarded(type : Class<D>, target : D) : D
+  }
+  class Snapshot <<memento>>
+  class "DAO proxy (java.lang.reflect.Proxy)" as DaoProxy <<proxy>>
+  class ConnectionPool <<singleton>> {
+    +{static} initialize(...) : ConnectionPool
+    +{static} standalone(...) : ConnectionPool
+  }
+  class Migrator {
+    +{static} migrate(pool) : int
+    +{static} status(pool) : List<ScriptStatus>
+  }
+}
+
+App ..> StorageFactory : create(config)
+StorageFactory ..> Storage : <<create>>
+Storage <|.. RelationalStorage
+Storage <|.. InMemoryStorage
+Storage ..> DAOFactory
+Storage ..> TransactionRunner
+Storage ..> DatabaseHealth
+
+RelationalStorage --> "1" ConnectionPool
+RelationalStorage ..> Migrator : migrate on start
+RelationalStorage ..> OrmDAOFactory : <<create>>
+RelationalStorage ..> TransactionManagerAdapter : <<create>>
+RelationalStorage ..> JdbcDatabaseHealthAdapter : <<create>>
+InMemoryStorage --> "1" InMemoryDAOFactory
+InMemoryStorage ..> InMemoryTransactionAdapter : <<create>>
+
+DAOFactory <|.. OrmDAOFactory
+DAOFactory <|.. InMemoryDAOFactory
+TransactionRunner <|.. TransactionManagerAdapter
+TransactionRunner <|.. InMemoryTransactionAdapter
+DatabaseHealth <|.. JdbcDatabaseHealthAdapter
+InMemoryTransactionAdapter --> InMemoryDAOFactory : adapts
+InMemoryDAOFactory ..> Snapshot : creates / restores
+InMemoryDAOFactory ..> DaoProxy : hands out
+
+StorageTransfer ..> Storage : reads one, writes the other
+DatabaseTool ..> StorageTransfer
+DatabaseTool ..> Migrator
+DatabaseTool ..> ConnectionPool : standalone() for the target
+
+note right of Storage
+  ABSTRACT FACTORY: one family =
+  DAOs + transactions + health that belong together.
+  DB_URL picks it: jdbc:postgresql / jdbc:mysql
+  (relational; the SqlDialect is chosen inside)
+  or memory: (no database).
+end note
+note bottom of InMemoryDAOFactory
+  MEMENTO: inTransaction() locks, snapshots every store,
+  restores the snapshot if the work throws.
+  PROXY: every DAO call holds the same reentrant lock,
+  so the web server's threads can share the store.
+end note
+note bottom of StorageTransfer
+  Written only against Storage / DAOFactory:
+  PostgreSQL → MySQL, database → memory (dry run),
+  any pair, one target transaction, idempotent.
+end note
+@enduml

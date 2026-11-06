@@ -1,0 +1,17 @@
+# Dependabot: weekly update proposals for the pinned GitHub Actions and the Node.js tooling.
+# The vendored jars in app/lib are updated by hand (lib.sha256, security/components.csv, THIRD_PARTY_NOTICES.md)
+# and checked for known vulnerabilities by `make -C app sca`.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /app/api
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /app/e2e
+    schedule:
+      interval: weekly

@@ -1,0 +1,11 @@
+{
+  "name": "joballoc-e2e",
+  "private": true,
+  "description": "Browser end-to-end tests for the Job Allocation Board",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1"
+  }
+}

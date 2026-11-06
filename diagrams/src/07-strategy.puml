@@ -1,0 +1,49 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+title Strategy (+ Template Method default) — as built (UML 2.5.1 class diagram)
+
+class AllocationServiceImpl <<context>> {
+  +autoAllocate(jobIds : List<String>, policyName : String) : List<AutoAllocationResult>
+  -candidatesFor(job : Job) : List<Candidate>
+}
+interface AllocationPolicy <<strategy>> {
+  +name() : String
+  +order(job : Job) : Comparator<Worker>
+  +rank(job : Job, eligible : List<Worker>) : List<Worker> {default}
+}
+class SkillMatchPolicy {
+  +order(job : Job) : Comparator<Worker>
+}
+class LeastLoadedPolicy {
+  +order(job : Job) : Comparator<Worker>
+}
+class FirstFitPolicy {
+  +order(job : Job) : Comparator<Worker>
+}
+class Policies <<utility>> {
+  ~{static} mostRemainingCapacity(job : Job) : Comparator<Worker>
+}
+class PolicyFactory <<factory>> {
+  +{static} DEFAULT : String = "SKILL_MATCH"
+  -registry : Map<String, AllocationPolicy>
+  +register(policy : AllocationPolicy) : void
+  +forName(name : String) : AllocationPolicy
+  +names() : List<String>
+}
+AllocationServiceImpl --> "1" PolicyFactory
+AllocationServiceImpl ..> AllocationPolicy : <<use>>
+PolicyFactory o--> "*" AllocationPolicy : registry\n(one shared instance each)
+AllocationPolicy <|.. SkillMatchPolicy
+AllocationPolicy <|.. LeastLoadedPolicy
+AllocationPolicy <|.. FirstFitPolicy
+SkillMatchPolicy ..> Policies : <<use>>
+LeastLoadedPolicy ..> Policies : <<use>>
+note bottom of AllocationPolicy
+  rank() is the fixed algorithm: sort by order(job),
+  then break ties by worker ID (deterministic).
+  A new policy supplies only order().
+end note
+@enduml

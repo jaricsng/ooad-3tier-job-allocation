@@ -1,0 +1,647 @@
+openapi: 3.1.0
+info:
+  title: Workload Job Allocation API
+  version: 1.1.0
+  summary: Allocate pending jobs to workers by skill and daily capacity.
+  description: |
+    The same system operations as the Job Allocation Board, as JSON. This document is the CONTRACT
+    of the API: `OpenApiContractTest` fails the build if a route or a DTO field drifts from it, and
+    `make api-lint` checks it with Spectral (`api/.spectral.yaml`).
+
+    Integration conventions used by every operation:
+    - **Errors** are RFC 9457 Problem Details (`application/problem+json`).
+    - **Correlation ID**: send `X-Request-Id` (8-64 characters of letters, digits, `.`, `_`, `-`) or one is generated;
+      it is echoed in the response, written to the server's access log and included in problem details.
+    - **Idempotency**: send `Idempotency-Key` on POST requests; a retry with the same key and body returns the
+      stored response (header `Idempotent-Replayed: true`) instead of allocating twice. Keys live 24 hours.
+    - **Optimistic concurrency**: a job's `ETag` is its version. Send it back as `If-Match` when allocating,
+      or put `jobVersion` in the body. A stale `If-Match` is 412; a stale `jobVersion` is 409.
+    - **Versioning**: breaking changes get a new path prefix (`/api/v2`); additive changes stay in v1.
+  contact:
+    name: Job Allocation maintainers
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local classroom instance
+security:
+  - basicAuth: []
+  - sessionCookie: []
+tags:
+  - name: Jobs
+    description: Pending jobs and their eligible workers
+  - name: Allocations
+    description: Allocate, auto-allocate, inspect and release allocations
+  - name: Meta
+    description: The API contract itself
+paths:
+  /api/v1/openapi.yaml:
+    get:
+      tags:
+        - Meta
+      operationId: getOpenApiDocument
+      summary: This OpenAPI document
+      description: 'Returns this document as served by the running version, for code generators and API consoles. Role VIEWER.'
+      responses:
+        '200':
+          description: The contract that matches the running code
+          content:
+            application/yaml:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /api/v1/jobs:
+    get:
+      tags:
+        - Jobs
+      operationId: listPendingJobs
+      summary: Pending jobs for a date, highest priority first
+      description: 'System operation findPendingJobs (UI: Pending Jobs grid / Refresh). Role VIEWER.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: status
+          in: query
+          description: Only PENDING is supported
+          schema:
+            type: string
+            enum:
+              - PENDING
+        - $ref: '#/components/parameters/Date'
+        - name: priority
+          in: query
+          schema:
+            $ref: '#/components/schemas/Priority'
+        - name: skill
+          in: query
+          description: Skill code that the job must require, e.g. LINUX
+          schema:
+            type: string
+            maxLength: 32
+      responses:
+        '200':
+          description: Pending jobs
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/JobSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /api/v1/jobs/{id}:
+    get:
+      tags:
+        - Jobs
+      operationId: getJob
+      summary: One job, with its version as ETag
+      description: 'Role VIEWER. The ETag header is the job version, for If-Match on allocateJob or If-None-Match revalidation.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/JobId'
+        - name: If-None-Match
+          in: header
+          description: ETag from an earlier response; 304 if the job has not changed
+          schema:
+            type: string
+      responses:
+        '200':
+          description: The job
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobSummary'
+        '304':
+          description: Not modified since the ETag in If-None-Match
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/jobs/{id}/eligible-workers:
+    get:
+      tags:
+        - Jobs
+      operationId: listCandidates
+      summary: Eligible workers first (ranked by SKILL_MATCH), then the others with the reason
+      description: 'System operation findEligibleWorkers (UI: select a job row). Role VIEWER.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Candidates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkerCandidate'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/allocations:
+    get:
+      tags:
+        - Allocations
+      operationId: listAllocations
+      summary: Active allocations on a date
+      description: 'System operation findAllocations (UI: Allocations list). Role VIEWER.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/Date'
+      responses:
+        '200':
+          description: Active allocations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Allocation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags:
+        - Allocations
+      operationId: allocateJob
+      summary: Allocate one job to one worker (SUPERVISOR)
+      description: 'System operation allocate (UI: Allocate). Role SUPERVISOR. Pre-conditions: job PENDING, worker has every required skill and enough remaining capacity on the work date, version unchanged.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - name: If-Match
+          in: header
+          description: The job's ETag from GET /api/v1/jobs/{id}; used when jobVersion is not in the body
+          schema:
+            type: string
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AllocateRequest'
+      responses:
+        '201':
+          description: Allocated
+          headers:
+            Location:
+              description: URL of the new allocation
+              schema:
+                type: string
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AllocationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '422':
+          $ref: '#/components/responses/RuleViolated'
+  /api/v1/allocations/auto:
+    post:
+      tags:
+        - Allocations
+      operationId: autoAllocateJobs
+      summary: Allocate several jobs with a named policy, most urgent first (SUPERVISOR)
+      description: 'System operation autoAllocate (UI: Auto-Allocate) using a STRATEGY policy. Role SUPERVISOR. Jobs that cannot be allocated are reported, not failed.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AutoAllocateRequest'
+      responses:
+        '200':
+          description: One result per job, allocated or not
+          headers:
+            Idempotent-Replayed:
+              $ref: '#/components/headers/IdempotentReplayed'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AutoAllocationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/RuleViolated'
+  /api/v1/allocations/{id}:
+    get:
+      tags:
+        - Allocations
+      operationId: getAllocation
+      summary: One allocation (the target of the Location header)
+      description: 'Role VIEWER. Target of the Location header returned by allocateJob.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/AllocationId'
+      responses:
+        '200':
+          description: The allocation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Allocation'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Allocations
+      operationId: releaseAllocation
+      summary: Release an allocation; the job is pending again (SUPERVISOR)
+      description: 'System operation unassign (UI: Unassign). Role SUPERVISOR. The job becomes PENDING and the worker capacity is freed.'
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/AllocationId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Released
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/RuleViolated'
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: For integration clients. No CSRF token needed.
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: JA_SESSION
+      description: Browser session after POST /login. State-changing calls also need the X-CSRF-Token header.
+  parameters:
+    RequestId:
+      name: X-Request-Id
+      in: header
+      description: Correlation ID; generated when absent or malformed
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._-]{8,64}$'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      description: Unique per logical operation (for example a UUID); retries reuse it
+      schema:
+        type: string
+        pattern: '^[A-Za-z0-9._:-]{8,128}$'
+    CsrfToken:
+      name: X-CSRF-Token
+      in: header
+      description: Required only with sessionCookie authentication
+      schema:
+        type: string
+    Date:
+      name: date
+      in: query
+      description: Work date (ISO 8601); default today in the server's time zone
+      schema:
+        type: string
+        format: date
+    JobId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        maxLength: 16
+    AllocationId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        maxLength: 40
+  headers:
+    RequestId:
+      description: Correlation ID of this request
+      schema:
+        type: string
+    ETag:
+      description: Strong ETag carrying the resource's optimistic-lock version, e.g. "3"
+      schema:
+        type: string
+    IdempotentReplayed:
+      description: Present (true) when this is the stored response of an earlier request with the same key
+      schema:
+        type: string
+        enum:
+          - 'true'
+  responses:
+    BadRequest:
+      description: Malformed input
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Unauthenticated:
+      description: Missing or wrong credentials
+      headers:
+        WWW-Authenticate:
+          schema:
+            type: string
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Forbidden:
+      description: Signed in, but the role is not allowed (or the CSRF token is missing)
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Unknown ID
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: Stale jobVersion, concurrent change, or the same Idempotency-Key still in progress
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PreconditionFailed:
+      description: The If-Match ETag no longer matches the job
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RuleViolated:
+      description: A business rule failed (skills, capacity, job not pending), or an Idempotency-Key reused with another body
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Priority:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+    JobSummary:
+      type: object
+      additionalProperties: false
+      required:
+        - jobId
+        - title
+        - requiredSkills
+        - effortHours
+        - workDate
+        - dueDate
+        - priority
+        - status
+        - version
+      properties:
+        jobId:
+          type: string
+        title:
+          type: string
+        requiredSkills:
+          type: array
+          items:
+            type: string
+        effortHours:
+          type: integer
+          minimum: 1
+        workDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        priority:
+          $ref: '#/components/schemas/Priority'
+        status:
+          type: string
+          enum:
+            - PENDING
+            - ALLOCATED
+            - IN_PROGRESS
+            - DONE
+            - CANCELLED
+        version:
+          type: integer
+          format: int64
+          description: Optimistic-lock version; send it back as jobVersion or as If-Match
+    WorkerCandidate:
+      type: object
+      additionalProperties: false
+      required:
+        - workerId
+        - name
+        - skills
+        - allocatedHours
+        - capacityHours
+        - remainingHours
+        - eligible
+      properties:
+        workerId:
+          type: string
+        name:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        allocatedHours:
+          type: integer
+        capacityHours:
+          type: integer
+        remainingHours:
+          type: integer
+        eligible:
+          type: boolean
+        reason:
+          type:
+            - string
+            - 'null'
+          description: Why the worker cannot take the job; null when eligible
+    AllocateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - jobId
+        - workerId
+      properties:
+        jobId:
+          type: string
+        workerId:
+          type: string
+        jobVersion:
+          type: integer
+          format: int64
+          description: The version the client saw; omit only when sending If-Match
+    AllocationResult:
+      type: object
+      additionalProperties: false
+      required:
+        - allocationId
+        - jobId
+        - workerId
+        - status
+        - message
+      properties:
+        allocationId:
+          type: string
+        jobId:
+          type: string
+        workerId:
+          type: string
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - RELEASED
+            - COMPLETED
+        message:
+          type: string
+    AutoAllocateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - jobIds
+      properties:
+        jobIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        policy:
+          type: string
+          enum:
+            - SKILL_MATCH
+            - LEAST_LOADED
+            - FIRST_FIT
+          description: Default SKILL_MATCH
+    AutoAllocationResult:
+      type: object
+      additionalProperties: false
+      required:
+        - jobId
+        - allocated
+        - message
+      properties:
+        jobId:
+          type: string
+        allocated:
+          type: boolean
+        workerId:
+          type:
+            - string
+            - 'null'
+        allocationId:
+          type:
+            - string
+            - 'null'
+        message:
+          type: string
+    Allocation:
+      type: object
+      additionalProperties: false
+      required:
+        - allocationId
+        - jobId
+        - workerId
+        - workDate
+        - hours
+        - allocatedBy
+        - allocatedAt
+      properties:
+        allocationId:
+          type: string
+        jobId:
+          type: string
+        jobTitle:
+          type: string
+        workerId:
+          type: string
+        workerName:
+          type:
+            - string
+            - 'null'
+        workDate:
+          type: string
+          format: date
+        hours:
+          type: integer
+        allocatedBy:
+          type: string
+        allocatedAt:
+          type: string
+          format: date-time
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details
+      required:
+        - type
+        - title
+        - status
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          examples:
+            - /problems/conflict
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+        requestId:
+          type: string
+          description: Correlation ID (same as the X-Request-Id response header)

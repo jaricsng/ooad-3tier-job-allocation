@@ -1,0 +1,13 @@
+target/
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/screenshots/
+*.log
+.DS_Store
+.idea/
+*.iml
+.vscode/
+.env
+tools/
+api/node_modules/

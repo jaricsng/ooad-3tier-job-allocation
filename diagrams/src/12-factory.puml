@@ -1,0 +1,36 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+title Abstract Factory — as built (UML 2.5.1 class diagram)
+interface DAOFactory <<abstract factory>> {
+  +jobDao() : JobDAO
+  +workerDao() : WorkerDAO
+  +allocationDao() : AllocationDAO
+  +auditDao() : AuditDAO
+  +skillDao() : SkillDAO
+  +userDao() : UserDAO
+}
+class OrmDAOFactory {
+  +OrmDAOFactory(tx : TransactionManager)
+}
+class InMemoryDAOFactory <<unit tests>>
+interface JobDAO
+class OrmJobDAO
+class "InMemoryDAOFactory.MemJobDAO" as MemJobDAO
+class AllocationServiceImpl <<client>>
+class BusinessTier <<factory>>
+BusinessTier ..> AllocationServiceImpl : <<create>>\n(receives a DAOFactory)
+AllocationServiceImpl --> DAOFactory
+DAOFactory <|.. OrmDAOFactory
+DAOFactory <|.. InMemoryDAOFactory
+JobDAO <|.. OrmJobDAO
+JobDAO <|.. MemJobDAO
+OrmDAOFactory ..> OrmJobDAO : <<create>>
+InMemoryDAOFactory ..> MemJobDAO : <<create>>
+note bottom of DAOFactory
+  One family per storage: relational (PostgreSQL or MySQL; the SqlDialect
+  comes from DB_URL) or in memory (DB_URL=memory: and unit tests).
+  The service never names a concrete DAO. See 28 for the Storage family above it.
+end note
+@enduml

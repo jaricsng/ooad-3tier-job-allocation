@@ -1,0 +1,68 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+
+class Worker <<entity>> {
+  -workerId : String
+  -name : String
+  -dailyCapacityHours : int
+  +hasAllSkills(required : Set<Skill>) : boolean
+  +remainingCapacity(on : LocalDate) : int
+  +canTake(job : Job) : boolean
+  +assign(job : Job, actor : String) : Allocation
+}
+class Allocation <<entity>> {
+  -allocationId : String
+  -allocatedOn : LocalDate
+  -allocatedBy : String
+  -hours : int
+  -status : AllocationStatus
+  +release() : void
+}
+class Job <<entity>> {
+  -jobId : String
+  -title : String
+  -effortHours : int
+  -dueDate : LocalDate
+  -priority : Priority
+  -status : JobStatus
+  -version : long
+  +isAllocatable() : boolean
+  +markAllocated() : void
+  +markPending() : void
+}
+class Skill <<valueObject>> {
+  -code : String
+  -name : String
+}
+enum JobStatus {
+  PENDING
+  ALLOCATED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+enum AllocationStatus {
+  ACTIVE
+  RELEASED
+  COMPLETED
+}
+interface AllocationPolicy <<strategy>> {
+  +order(job : Job) : Comparator<Worker>
+  +rank(job : Job, eligible : List<Worker>) : List<Worker>
+}
+class SkillMatchPolicy
+class LeastLoadedPolicy
+
+Worker "1" -- "0..*" Allocation : holds >
+Allocation "0..*" --> "1" Job : for >
+Worker "0..*" --> "1..*" Skill : has >
+Job "0..*" --> "1..*" Skill : requires >
+Job ..> JobStatus
+Allocation ..> AllocationStatus
+AllocationPolicy <|.. SkillMatchPolicy
+AllocationPolicy <|.. LeastLoadedPolicy
+AllocationPolicy ..> Worker : ranks
+@enduml

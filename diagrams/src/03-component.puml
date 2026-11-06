@@ -1,0 +1,89 @@
+@startuml
+!include style.iuml
+skinparam componentStyle uml2
+title Job Allocation — Component Diagram (UML 2.5.1, as built after refactoring)
+
+component "Web browser\n(renders server-side HTML + CSS,\nno JavaScript)" as UI <<external>>
+component "API Client" as CLI <<external>>
+
+package "Presentation tier — edu.ooad.joballoc.web" {
+  () "HTTP pages\n/login /board" as IPAGES
+  () "REST API\n/api/v1" as IREST
+  component "Web" as WEB <<subsystem>> {
+    component "HttpExchangeAdapter\n(JDK server ⇄ Request/Response)" as HXA <<adapter>>
+    component "FrontController + Router\n+ ErrorMapper" as FC
+    component "BoardController\nLoginController" as BCs
+    component "ApiController + DTOs\n(IdempotentHandler decorator)" as AC
+    component "HealthController" as HC
+    component "Views\n(BoardView, LoginView)" as VIEWS
+  }
+}
+
+package "Business tier — business + domain" {
+  () "AllocationService" as IAS
+  () "AuthService" as IAUTH
+  () "TransactionRunner" as ITX
+  () "DatabaseHealth" as IDBH
+  component "AllocationManagement" as AM <<subsystem>> {
+    component "SecuredTransactionalProxy\n(Security → ExceptionTranslation\n→ Transaction interceptors)" as PX
+    component "AllocationServiceImpl" as SI
+    component "Domain model\n(Job, Worker, Allocation)" as DM
+  }
+  component "PolicyEngine\n(PolicyFactory + strategies)" as PE
+  component "EventBus\n(DomainEventPublisher,\nAuditListener, Metrics)" as EB
+  component "AuthService\n(PBKDF2, lockout)" as AUTH
+  () "AllocationPolicy" as IPOL
+  () "DomainEventListener" as IEV
+}
+
+package "Persistence tier — persistence" {
+  () "DAOFactory /\nDAO interfaces" as IDAO
+  () "TransactionManager" as ITM
+  component "DataAccess\n(OrmDAOFactory, Orm*DAO,\nAbstractOrmDAO)" as DA <<DAO>>
+  component "Mini ORM\n(EntityMetadata, TransactionManager,\nConnectionPool, Migrator)" as ORM
+  component "SQL dialects\n(DialectFactory, PostgresDialect,\nMySqlDialect)" as DIA <<strategy>>
+  component "JDBC driver\n(pgjdbc or MySQL Connector/J)" as JDBC <<library>>
+}
+package "Adapters — edu.ooad.joballoc.adapter" {
+  component "TransactionManagerAdapter" as TMA <<adapter>>
+  component "JdbcDatabaseHealthAdapter" as JDH <<adapter>>
+}
+component "PostgreSQL 16 or MySQL 8.4\n(Docker: joballoc-db / joballoc-mysql)" as DB <<external>>
+
+UI ..> IPAGES : <<use>>\nHTML forms
+CLI ..> IREST : <<use>>\nJSON + Basic auth
+IPAGES -- HXA
+IREST -- HXA
+HXA ..> FC
+FC ..> HC
+HC ..> IDBH : <<use>>
+FC ..> BCs
+FC ..> AC
+BCs ..> VIEWS
+FC ..> IAUTH : sign-in, Basic auth
+BCs ..> IAS
+AC ..> IAS
+IAS -- PX
+IAUTH -- AUTH
+PX ..> ITX : @Transactional
+PX ..> SI : delegates
+SI ..> DM
+SI ..> IPOL
+IPOL -- PE
+SI ..> IEV : publish events
+IEV -- EB
+SI ..> IDAO
+EB ..> IDAO : AuditDAO
+AUTH ..> IDAO : UserDAO
+IDAO -- DA
+ITX -- TMA
+IDBH -- JDH
+ITM -- ORM
+TMA ..> ITM : adapts
+JDH ..> ITM : validation query
+DA ..> ORM
+DA ..> DIA : product differences
+ORM ..> DIA : chosen from DB_URL
+ORM ..> JDBC
+JDBC ..> DB : <<use>>\nSQL (parameterised)
+@enduml

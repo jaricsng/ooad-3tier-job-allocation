@@ -1,0 +1,12 @@
+{
+  "name": "joballoc-api-tooling",
+  "private": true,
+  "description": "Lints the OpenAPI contract (src/main/resources/api/openapi.yaml) with Spectral. Run: make api-lint",
+  "license": "MIT",
+  "scripts": {
+    "lint": "spectral lint ../src/main/resources/api/openapi.yaml --ruleset .spectral.yaml --fail-severity=warn"
+  },
+  "devDependencies": {
+    "@stoplight/spectral-cli": "6.17.0"
+  }
+}

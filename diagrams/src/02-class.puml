@@ -1,0 +1,149 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+title All three tiers in one class view (UML 2.5.1, as built after refactoring)
+
+package "Presentation tier — web" as ui {
+  class BoardView <<boundary>> {
+    +{static} render(model : Model) : String
+  }
+  class BoardController <<control>> {
+    +board(req : Request) : Response
+    +allocate(req : Request) : Response
+    +autoAllocate(req : Request) : Response
+    +unassign(req : Request) : Response
+  }
+  class ApiController <<control>> {
+    +pendingJobs(req) : Response
+    +job(req) : Response
+    +allocate(req) : Response
+    +allocation(req) : Response
+  }
+  class JobSummaryDTO <<DTO>> {
+    +jobId : String
+    +title : String
+    +requiredSkills : List<String>
+    +effortHours : int
+    +workDate : LocalDate
+    +dueDate : LocalDate
+    +priority : String
+    +status : String
+    +version : long
+  }
+  class AllocateRequestDTO <<DTO>> {
+    +jobId : String
+    +workerId : String
+    +jobVersion : Long
+  }
+}
+
+package "Business tier — business, domain" as biz {
+  interface AllocationService <<facade>> {
+    +loadBoard(criteria : JobCriteria, selectedJobId : String) : BoardData
+    +findEligibleWorkers(jobId : String) : List<Candidate>
+    +allocate(jobId : String, workerId : String, jobVersion : long) : Allocation
+    +autoAllocate(jobIds : List<String>, policyName : String) : List<AutoAllocationResult>
+    +unassign(allocationId : String) : void
+  }
+  class AllocationServiceImpl <<service>>
+  interface AllocationPolicy <<strategy>> {
+    +order(job : Job) : Comparator<Worker>
+    +rank(job : Job, eligible : List<Worker>) : List<Worker>
+  }
+  class PolicyFactory <<factory>>
+
+  package "domain" {
+    class Job <<entity>> {
+      -jobId : String
+      -requiredSkills : Set<String>
+      -effortHours : int
+      -workDate : LocalDate
+      -priority : Priority
+      -status : JobStatus
+      -version : long
+      +isAllocatable() : boolean
+      +markAllocated() : void
+      +markPending() : void
+    }
+    class Worker <<entity>> {
+      -workerId : String
+      -dailyCapacityHours : int
+      -skills : Set<String>
+      -version : long
+      +canTake(job : Job) : boolean
+      +reasonCannotTake(job : Job) : String
+      +remainingCapacity(on : LocalDate) : int
+      +assign(job : Job, actor : String, now : Instant) : Allocation
+      +pullEvents() : List<DomainEvent>
+    }
+    class Allocation <<entity>> {
+      -allocationId : String
+      -workDate : LocalDate
+      -hours : int
+      -allocatedBy : String
+      -status : AllocationStatus
+      +release() : void
+    }
+    class JobCriteria <<query object>> {
+      +date : LocalDate
+      +priority : Priority
+      +skill : String
+    }
+  }
+}
+
+package "Persistence tier — persistence" as dao {
+  interface "GenericDAO<T, ID>" as GenericDAO {
+    +findById(id : ID) : Optional<T>
+    +findByIds(ids : Collection<ID>) : List<T>
+    +save(entity : T) : void
+    +update(entity : T) : void
+  }
+  interface JobDAO {
+    +findPending(criteria : JobCriteria) : List<Job>
+  }
+  interface WorkerDAO {
+    +findWithAllocations(workerId : String, on : LocalDate) : Optional<Worker>
+    +findAllWithAllocations(on : LocalDate) : List<Worker>
+  }
+  interface AllocationDAO {
+    +findActiveByDate(on : LocalDate) : List<Allocation>
+  }
+  class OrmJobDAO
+  class OrmWorkerDAO
+  class OrmAllocationDAO
+}
+
+BoardView <.. BoardController : <<use>>
+BoardController ..> AllocationService : <<use>>
+ApiController ..> AllocationService : <<use>>
+ApiController ..> AllocateRequestDTO : <<use>>
+ApiController ..> JobSummaryDTO : <<create>>
+
+AllocationService <|.. AllocationServiceImpl
+AllocationServiceImpl --> "1" PolicyFactory
+PolicyFactory o--> "*" AllocationPolicy
+AllocationServiceImpl --> "1" JobDAO
+AllocationServiceImpl --> "1" WorkerDAO
+AllocationServiceImpl --> "1" AllocationDAO
+
+Worker "1" -- "0..*" Allocation : holds >
+Allocation "0..*" --> "1" Job : for >
+
+GenericDAO <|-- JobDAO
+GenericDAO <|-- WorkerDAO
+GenericDAO <|-- AllocationDAO
+JobDAO <|.. OrmJobDAO
+WorkerDAO <|.. OrmWorkerDAO
+AllocationDAO <|.. OrmAllocationDAO
+JobDAO ..> JobCriteria : <<use>>
+
+note right of Worker
+  GRASP Information Expert + Creator:
+  Worker owns skills and current load,
+  so it decides canTake() and creates
+  the Allocation in assign().
+end note
+@enduml

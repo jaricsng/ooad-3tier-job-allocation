@@ -1,0 +1,70 @@
+# Databases for the Job Allocation app (development and classroom use).
+# PostgreSQL (default):
+#   make db-up      start, wait until ready, create joballoc_test if missing
+#   make db-down    stop, keep data
+#   make db-reset   stop and DELETE all data, then start fresh
+# MySQL (optional, compose profile "mysql"): make db-up-mysql / db-down-mysql / db-reset-mysql
+# No folder from your computer is mounted (data lives in a Docker named volume),
+# so Docker Desktop file-sharing settings are not needed.
+# Port is published on localhost only. Override with DB_PORT=5433 make db-up
+# if another PostgreSQL already uses 5432.
+# Checked by policy/compose.rego (make policy): pinned image tag, localhost-only ports,
+# no bind mounts, no privileged mode, credentials from variables, health check present.
+name: joballoc
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: joballoc-db
+    environment:
+      # Same variables as the app (config/app.env.example); demo defaults only for local use.
+      POSTGRES_USER: ${DB_USER:-joballoc}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-joballoc}
+      POSTGRES_DB: joballoc
+      TZ: Asia/Singapore
+      PGTZ: Asia/Singapore
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - joballoc-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d joballoc"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # MySQL 8.4 LTS: same app, same tests; the SqlDialect is chosen from DB_URL (jdbc:mysql://...).
+  # Started only with the "mysql" profile, so `make db-up` still starts PostgreSQL alone.
+  mysql:
+    image: mysql:8.4
+    container_name: joballoc-mysql
+    profiles: ["mysql"]
+    # Binary logging is on by default; without this, only a SUPER user may create the audit triggers.
+    # Development only: in production a DBA account applies the migrations instead.
+    command: ["--log-bin-trust-function-creators=1"]
+    environment:
+      MYSQL_DATABASE: joballoc
+      MYSQL_USER: ${DB_USER:-joballoc}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-joballoc}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-joballoc-root}
+      TZ: Asia/Singapore
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - joballoc-mysql-data:/var/lib/mysql
+    healthcheck:
+      # TCP ping: fails while the image's first-start initialisation runs with networking off.
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_ROOT_PASSWORD mysqladmin ping -h 127.0.0.1 -u root --silent"]
+      interval: 2s
+      timeout: 3s
+      retries: 60
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  joballoc-data:
+  joballoc-mysql-data:

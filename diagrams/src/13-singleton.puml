@@ -1,0 +1,31 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+title Singleton — as built (UML 2.5.1 class diagram)
+class ConnectionPool <<singleton>> {
+  -{static} instance : ConnectionPool
+  -idle : BlockingQueue<Connection>
+  -created : AtomicInteger
+  -ConnectionPool(url, user, password, maxSize)
+  +{static} initialize(url, user, password, maxSize) : ConnectionPool
+  +{static} getInstance() : ConnectionPool
+  +{static} shutdown() : void
+  +acquire() : Connection
+  +release(c : Connection) : void
+}
+class App <<composition root>>
+class TransactionManager
+class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO
+App ..> ConnectionPool : initialize(...)
+App ..> TransactionManager : <<create>> with the pool
+TransactionManager --> "1" ConnectionPool : acquire / release
+AbstractOrmDAO --> "1" TransactionManager : withConnection
+note right of ConnectionPool
+  Private constructor + synchronized static factory + volatile field.
+  initialize() with DIFFERENT settings fails fast (it used to return
+  the old pool silently). Discussion: frameworks prefer a DI-managed
+  singleton scope to a static accessor.
+end note
+@enduml

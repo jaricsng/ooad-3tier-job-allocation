@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<!-- Every suppression states its reason. Keep this list short: a growing list is a smell. -->
+<suppressions>
+    <!-- PasswordHasher.main is the `make hash-password` command-line tool: printing is its job. -->
+    <suppress id="noConsoleOutput" files="PasswordHasher\.java"/>
+    <!-- DatabaseTool is the `make db-status / db-migrate / db-copy` command-line tool: printing is its job. -->
+    <suppress id="noConsoleOutput" files="DatabaseTool\.java"/>
+    <!-- Test tools print where they wrote files; tests may use java.util.Random for data. -->
+    <suppress id="noConsoleOutput" files="[\\/]src[\\/]test[\\/]"/>
+    <!-- Views hold HTML markup in text blocks; wrapping markup would make the templates harder to read. -->
+    <suppress checks="LineLength" files="[\\/]web[\\/]view[\\/]"/>
+    <!-- Tests use literal values (statuses, hours, versions) as readable expectations. -->
+    <suppress checks="MagicNumber" files="[\\/]src[\\/]test[\\/]"/>
+</suppressions>

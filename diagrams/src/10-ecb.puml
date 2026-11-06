@@ -1,0 +1,21 @@
+@startuml
+!include style.iuml
+left to right direction
+actor Supervisor
+boundary "AllocationBoardView" as B1
+boundary "AllocationController\n(REST endpoint)" as B2
+control "AllocateJob\n(AllocationService)" as C1
+control "AutoAllocate\n(AllocationService)" as C2
+entity "Job" as E1
+entity "Worker" as E2
+entity "Allocation" as E3
+Supervisor -- B1
+B1 --> B2 : HTTPS/JSON
+B2 --> C1
+B2 --> C2
+C1 --> E2
+C1 --> E1
+C2 --> E2
+E2 --> E3 : creates
+E3 --> E1
+@enduml

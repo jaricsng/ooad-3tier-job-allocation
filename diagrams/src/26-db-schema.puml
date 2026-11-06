@@ -1,0 +1,132 @@
+@startuml
+!include style.iuml
+' Database schema (physical data model) as built: app/src/main/resources/db/migration/{postgresql,mysql}
+' Information Engineering (crow's foot) notation. PlantUML renders it; UML 2.5.1 has no ER diagram,
+' so a class diagram with «table» stereotypes is the UML equivalent (see 08-dao for the mapping classes).
+hide circle
+hide empty members
+skinparam linetype polyline
+skinparam entityBackgroundColor #F3F6FA
+skinparam entityBorderColor #1E4E8C
+skinparam nodesep 70
+skinparam ranksep 60
+title Database schema — as built (portable: PostgreSQL 16 after V3, MySQL 8.4 from V1)
+
+entity "skill" as skill {
+  * **code** : varchar(32) <<PK>>
+  --
+  * name : varchar(100)
+}
+
+entity "worker" as worker {
+  * **worker_id** : varchar(16) <<PK>>
+  --
+  * name : varchar(100)
+  * daily_capacity_hours : int  <<CHECK 1..24>>
+  * version : bigint  <<optimistic lock>>
+}
+
+entity "worker_skill" as worker_skill {
+  * **worker_id** : varchar(16) <<PK, FK>>
+  * **skill_code** : varchar(32) <<PK, FK>>
+  --
+  * ordinal : int  <<keeps Set order>>
+}
+
+entity "job" as job {
+  * **job_id** : varchar(16) <<PK>>
+  --
+  * title : varchar(200)
+  * effort_hours : int  <<CHECK 1..24>>
+  * work_date : date
+  * due_date : date
+  * priority : varchar(16)  <<CHECK LOW..CRITICAL>>
+  * status : varchar(16)  <<CHECK PENDING..CANCELLED>>
+  * version : bigint  <<optimistic lock>>
+}
+
+entity "job_skill" as job_skill {
+  * **job_id** : varchar(16) <<PK, FK>>
+  * **skill_code** : varchar(32) <<PK, FK>>
+  --
+  * ordinal : int
+}
+
+entity "allocation" as allocation {
+  * **allocation_id** : varchar(40) <<PK>>
+  --
+  * job_id : varchar(16) <<FK>>
+  * worker_id : varchar(16) <<FK>>
+  * work_date : date
+  * hours : int  <<CHECK 1..24>>
+  * allocated_by : varchar(64)
+  * allocated_at : timestamp (UTC)
+  * status : varchar(16)  <<CHECK ACTIVE, RELEASED, COMPLETED>>
+  * version : bigint  <<optimistic lock>>
+}
+
+entity "app_user" as app_user {
+  * **username** : varchar(64) <<PK>>
+  --
+  * password_hash : varchar(200)  <<PBKDF2>>
+  * role : varchar(16)  <<CHECK VIEWER, SUPERVISOR>>
+  * display_name : varchar(100)
+}
+
+entity "audit_event" as audit_event <<append-only>> {
+  * **event_id** : varchar(40) <<PK>>
+  --
+  * event_type : varchar(40)
+  * actor : varchar(64)
+  * entity_id : varchar(40)
+  detail : varchar(500)
+  * occurred_at : timestamp (UTC)
+}
+
+entity "schema_version" as schema_version <<Migrator>> {
+  * **version** : int <<PK>>
+  --
+  * script : varchar(200)
+  * applied_at : timestamp
+}
+
+' Grid: worker | allocation | job  over  worker_skill | skill | job_skill; stand-alone tables below.
+worker ||-right-o{ allocation : "assigned"
+allocation }o-right-|| job : "allocates"
+worker ||-down-o{ worker_skill : "has"
+job ||-down-|{ job_skill : "requires"
+worker_skill }o-right-|| skill : "is a"
+skill ||-right-o{ job_skill : "needed by"
+worker_skill -[hidden]down- app_user
+skill -[hidden]down- audit_event
+job_skill -[hidden]down- schema_version
+
+note top of allocation
+  **Rule: at most one ACTIVE allocation per job**
+  PostgreSQL: partial unique index
+    on (job_id) where status = 'ACTIVE'
+  MySQL: generated column
+    active_job_id = job_id when ACTIVE, else NULL
+    + unique index (NULLs may repeat)
+end note
+
+note right of audit_event
+  UPDATE and DELETE rejected by triggers
+  PostgreSQL: one PL/pgSQL trigger function
+  MySQL: two triggers using SIGNAL
+  entity_id has no FK on purpose:
+  the trail outlives the rows it describes
+end note
+
+note right of job_skill
+  Before (PostgreSQL V1): skills were text[] columns
+  V3 moved them here with their order kept.
+  Mapped by @CollectionTable on Job / Worker.
+end note
+
+note left of app_user
+  Users are not linked by FK to
+  allocated_by or actor: a username
+  is recorded as text at that moment.
+end note
+@enduml

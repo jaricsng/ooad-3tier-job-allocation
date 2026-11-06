@@ -1,0 +1,44 @@
+# Continuous integration: the same gates as the pre-commit hooks, on every push and pull request.
+# Actions are pinned to full commit SHAs (supply chain); Dependabot proposes updates (.github/dependabot.yml).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # full history, so the secret-leak gate can be extended to scan every commit
+          persist-credentials: false
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: No private material in committed files
+        run: make check-public
+      - name: Pinned gate tools (checked against tools.sha256)
+        run: make -C app tools
+      - name: Quality gate (conventions, unit tests, policies, API contract, secrets, SAST, governance)
+        run: make -C app check
+      - name: HTTP/API integration tests on in-memory storage
+        run: make -C app test-int-memory

@@ -1,0 +1,4 @@
+# username,password_hash (PBKDF2, same as the SQL seed),role,display_name,email (as set by migration V4)
+# Demo passwords: supervisor / Supervisor#2026 and viewer / Viewer#2026. Change them outside a classroom.
+supervisor,pbkdf2-sha256$210000$EdDNmcc88PVS+AB12Fp/Jw==$uMB4wtot5P+d8DT9psabn79uXq3bP+tiikQ4cjlq7Bo=,SUPERVISOR,Sam Supervisor,supervisor@example.com
+viewer,pbkdf2-sha256$210000$ZZN//SNMsmar3N8sbWf/1w==$Z9EkP+vU0bgIaLU9PntNSZrGTgyV0KmgGIFeGBlMPts=,VIEWER,Vera Viewer,viewer@example.com

@@ -1,0 +1,55 @@
+@startuml
+!include style.iuml
+skinparam activityBackgroundColor #F3F6FA
+skinparam activityBorderColor #1E4E8C
+skinparam activityDiamondBackgroundColor #FFF6E5
+skinparam activityDiamondBorderColor #D9822B
+title DevSecOps gates, governance and audit as code — UML 2.5.1 activity diagram
+
+|Developer (with or without an AI assistant)|
+start
+:change code, tests, docs;
+:human review checklist\n(docs/ai-assisted-engineering.md §4);
+|make check (pre-commit hook)|
+fork
+  :lint\n(conventions, naming);
+fork again
+  :unit + architecture tests;
+fork again
+  :policy as code\n(compose, config, access);
+fork again
+  :API contract lint;
+fork again
+  :secrets\n(Gitleaks + self-test);
+fork again
+  :SAST\n(Semgrep rules + rule tests);
+fork again
+  :governance\n(SBOM, pins, licences, files);
+end fork
+if (all pass?) then (no)
+  |Developer (with or without an AI assistant)|
+  :fix the cause\n(no silent suppression);
+  stop
+else (yes)
+endif
+|make security / make audit|
+fork
+  :integration tests\nPostgreSQL, MySQL, memory;
+fork again
+  :browser tests;
+fork again
+  :SCA (OSV)\nHIGH/CRITICAL blocks;
+fork again
+  :DAST (OWASP ZAP)\nHigh blocks;
+fork again
+  :pen test\n(OWASP WSTG probes);
+end fork
+:evidence pack\nreport.md, results.json, logs,\nevidence, MANIFEST.sha256;
+if (every control passed?) then (yes)
+  :release (runbook §10);
+  stop
+else (no)
+  :record finding; fix or\naccept with reason + expiry;
+  stop
+endif
+@enduml

@@ -1,0 +1,227 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  Coding conventions for the Job Allocation app, as code (docs/coding-conventions.md explains each group).
+  Based on the Sun/Google conventions, tuned to this code base: 4-space indents, 120-column lines.
+  Run: make lint   (Checkstyle 14.4.0, pinned by SHA-256 in tools.sha256)
+-->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <module name="SuppressionFilter">
+        <property name="file" value="${config_loc}/suppressions.xml"/>
+    </module>
+
+    <!-- Files -->
+    <module name="NewlineAtEndOfFile"/>
+    <module name="FileTabCharacter"/>
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern" value="^(package|import) |https?://"/>
+    </module>
+    <module name="RegexpMultiline">
+        <property name="id" value="blankLineAfterMember"/>
+        <property name="format" value="\n( +)\}\n\1(public|protected|private|static|abstract|@[A-Z]|/\*\*)"/>
+        <property name="message" value="Separate a multi-line member from the next member with one blank line."/>
+    </module>
+    <module name="RegexpMultiline">
+        <property name="id" value="noDoubleBlankLines"/>
+        <property name="format" value="\n[ \t]*\n[ \t]*\n"/>
+        <property name="message" value="At most one consecutive blank line."/>
+    </module>
+    <module name="RegexpSingleline">
+        <property name="id" value="trailingWhitespace"/>
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Trailing whitespace."/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Naming: every kind of identifier (docs/coding-conventions.md §2) -->
+        <module name="TypeName"/>
+        <module name="AbstractClassName"/>
+        <module name="MethodName"/>
+        <module name="MemberName"/>
+        <module name="StaticVariableName"/>
+        <module name="ConstantName"/>
+        <module name="ParameterName"/>
+        <module name="LambdaParameterName"/>
+        <module name="CatchParameterName"/>
+        <module name="LocalVariableName"/>
+        <module name="LocalFinalVariableName"/>
+        <module name="PatternVariableName"/>
+        <module name="RecordComponentName"/>
+        <module name="ClassTypeParameterName">
+            <property name="format" value="^[A-Z][A-Z0-9]?$"/>
+        </module>
+        <module name="MethodTypeParameterName">
+            <property name="format" value="^[A-Z][A-Z0-9]?$"/>
+        </module>
+        <module name="InterfaceTypeParameterName">
+            <property name="format" value="^[A-Z][A-Z0-9]?$"/>
+        </module>
+        <module name="RecordTypeParameterName">
+            <property name="format" value="^[A-Z][A-Z0-9]?$"/>
+        </module>
+        <module name="AbbreviationAsWordInName">
+            <!-- 1 = at most two capitals in a row ("staleVersionIsAConflict" is fine, "HTTPServer" is not).
+                 DAO, DTO (pattern names) and IT (integration-test suffix) are the only allowed acronyms. -->
+            <property name="allowedAbbreviationLength" value="1"/>
+            <property name="allowedAbbreviations" value="DAO,DTO,IT"/>
+            <property name="ignoreFinal" value="false"/>
+            <property name="ignoreStatic" value="false"/>
+            <property name="ignoreStaticFinal" value="true"/>
+        </module>
+        <module name="IllegalIdentifierName"/>
+
+        <!-- Formatting and whitespace (docs/coding-conventions.md §1) -->
+        <module name="Indentation">
+            <property name="basicOffset" value="4"/>
+            <property name="caseIndent" value="4"/>
+            <property name="lineWrappingIndentation" value="8"/>
+            <property name="arrayInitIndent" value="4"/>
+            <property name="forceStrictCondition" value="false"/>
+        </module>
+        <module name="WhitespaceAround">
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+            <property name="allowEmptyLoops" value="true"/>
+            <property name="allowEmptyLambdas" value="true"/>
+        </module>
+        <module name="WhitespaceAfter"/>
+        <module name="NoWhitespaceBefore"/>
+        <module name="NoWhitespaceAfter"/>
+        <module name="MethodParamPad"/>
+        <module name="ParenPad"/>
+        <module name="GenericWhitespace"/>
+        <module name="TypecastParenPad"/>
+        <module name="OperatorWrap">
+            <property name="option" value="nl"/>
+        </module>
+        <module name="SeparatorWrap">
+            <property name="id" value="dotWrap"/>
+            <property name="tokens" value="DOT"/>
+            <property name="option" value="nl"/>
+        </module>
+        <module name="SeparatorWrap">
+            <property name="id" value="commaWrap"/>
+            <property name="tokens" value="COMMA"/>
+            <property name="option" value="eol"/>
+        </module>
+        <!-- Blank line before every type, constructor and block; consecutive one-line accessors may be grouped
+             (multi-line members are separated by the "blankLineAfterMember" check below). -->
+        <module name="EmptyLineSeparator">
+            <property name="tokens" value="PACKAGE_DEF, IMPORT, STATIC_IMPORT, CLASS_DEF, INTERFACE_DEF, ENUM_DEF,
+                RECORD_DEF, STATIC_INIT, INSTANCE_INIT, CTOR_DEF, COMPACT_CTOR_DEF"/>
+            <property name="allowNoEmptyLineBetweenFields" value="true"/>
+            <property name="allowMultipleEmptyLines" value="false"/>
+            <property name="allowMultipleEmptyLinesInsideClassMembers" value="false"/>
+        </module>
+        <module name="CustomImportOrder">
+            <!-- 1. project and third-party (sorted)  2. java.* / javax.*  3. static imports; one blank line between groups -->
+            <property name="customImportOrderRules" value="THIRD_PARTY_PACKAGE###STANDARD_JAVA_PACKAGE###STATIC"/>
+            <property name="standardPackageRegExp" value="^(java|javax)\."/>
+            <property name="sortImportsInGroupAlphabetically" value="true"/>
+            <property name="separateLineBetweenGroups" value="true"/>
+        </module>
+        <module name="DeclarationOrder"/>
+        <module name="OverloadMethodsDeclarationOrder"/>
+        <module name="OneTopLevelClass"/>
+        <module name="OuterTypeFilename"/>
+        <module name="AvoidNestedBlocks"/>
+        <module name="InnerAssignment"/>
+        <module name="MagicNumber">
+            <property name="ignoreNumbers" value="-1, 0, 1, 2"/>
+            <property name="ignoreHashCodeMethod" value="true"/>
+            <property name="ignoreAnnotation" value="true"/>
+            <property name="ignoreFieldDeclaration" value="true"/>
+        </module>
+        <module name="PackageName">
+            <property name="format" value="^edu\.ooad\.joballoc(\.[a-z][a-z0-9]*)*$"/>
+        </module>
+
+        <!-- Imports -->
+        <module name="AvoidStarImport"/>
+        <module name="RedundantImport"/>
+        <module name="UnusedImports"/>
+        <module name="IllegalImport"/>
+
+        <!-- Blocks and statements -->
+        <module name="NeedBraces"/>
+        <!-- K&R braces; one-line accessors such as `public String id() { return id; }` are allowed. -->
+        <module name="LeftCurly">
+            <property name="option" value="eol"/>
+            <property name="ignoreEnums" value="true"/>
+            <property name="tokens" value="CLASS_DEF, INTERFACE_DEF, ENUM_DEF, RECORD_DEF, LITERAL_IF, LITERAL_ELSE,
+                LITERAL_FOR, LITERAL_WHILE, LITERAL_DO, LITERAL_TRY, LITERAL_CATCH, LITERAL_FINALLY, LITERAL_SWITCH"/>
+        </module>
+        <module name="RightCurly"/>
+        <module name="EmptyBlock">
+            <property name="option" value="text"/>
+        </module>
+        <module name="EmptyCatchBlock">
+            <property name="exceptionVariableName" value="ignored|expected"/>
+        </module>
+        <module name="OneStatementPerLine"/>
+        <module name="MultipleVariableDeclarations"/>
+        <module name="MissingSwitchDefault"/>
+        <module name="FallThrough"/>
+        <module name="DefaultComesLast"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="SimplifyBooleanReturn"/>
+        <module name="StringLiteralEquality"/>
+        <module name="EqualsHashCode"/>
+        <module name="MissingOverride"/>
+        <module name="ModifierOrder"/>
+        <module name="RedundantModifier"/>
+        <module name="UpperEll"/>
+        <module name="ArrayTypeStyle"/>
+
+        <!-- Design -->
+        <module name="FinalClass"/>
+        <module name="HideUtilityClassConstructor"/>
+        <module name="InterfaceIsType"/>
+        <module name="VisibilityModifier">
+            <property name="protectedAllowed" value="true"/>
+            <property name="packageAllowed" value="true"/>
+        </module>
+        <module name="MethodLength">
+            <property name="max" value="60"/>
+        </module>
+        <module name="ParameterNumber">
+            <property name="max" value="9"/>
+        </module>
+        <module name="CyclomaticComplexity">
+            <property name="max" value="12"/>
+        </module>
+
+        <!-- Security and operability conventions -->
+        <module name="IllegalCatch">
+            <property name="illegalClassNames" value="Throwable"/>
+        </module>
+        <module name="Regexp">
+            <property name="id" value="noStackTraceToConsole"/>
+            <property name="format" value="\.printStackTrace\(\)"/>
+            <property name="illegalPattern" value="true"/>
+            <property name="message" value="Log the exception (java.util.logging) instead of printStackTrace()."/>
+        </module>
+        <module name="Regexp">
+            <property name="id" value="noConsoleOutput"/>
+            <property name="format" value="System\.(out|err)\.print"/>
+            <property name="illegalPattern" value="true"/>
+            <property name="message" value="Use java.util.logging, not System.out/err (command-line tools are suppressed explicitly)."/>
+        </module>
+        <module name="Regexp">
+            <property name="id" value="noInsecureRandom"/>
+            <property name="format" value="new (java\.util\.)?Random\("/>
+            <property name="illegalPattern" value="true"/>
+            <property name="message" value="Use SecureRandom for anything security-related."/>
+        </module>
+
+        <module name="SuppressWarningsHolder"/>
+    </module>
+    <module name="SuppressWarningsFilter"/>
+</module>

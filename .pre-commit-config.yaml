@@ -1,0 +1,17 @@
+# Git pre-commit hooks (https://pre-commit.com), at the repository root where pre-commit looks for them.
+# Install once:  pipx install pre-commit && pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: app-check
+        name: app quality gate (conventions, tests, policies, secrets, SAST, governance)
+        entry: make -C app check
+        language: system
+        pass_filenames: false
+        files: ^(app/|\.github/)
+      - id: check-public
+        name: no private teaching material (speaker notes, denylisted terms) in committed files
+        entry: make check-public
+        language: system
+        pass_filenames: false
+        always_run: true

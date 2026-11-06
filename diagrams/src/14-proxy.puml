@@ -1,0 +1,60 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+title Proxy + Chain of Responsibility — as built (UML 2.5.1 class diagram)
+
+class BoardController <<client>>
+class ApiController <<client>>
+interface AllocationService <<subject>> {
+  +allocate(jobId : String, workerId : String, jobVersion : long) : Allocation
+  +loadBoard(criteria : JobCriteria, selectedJobId : String) : BoardData
+}
+class AllocationServiceImpl <<real subject>>
+class "$Proxy (java.lang.reflect.Proxy)" as JdkProxy <<proxy>>
+class SecuredTransactionalProxy <<InvocationHandler>> {
+  -target : Object
+  -chain : List<Interceptor>
+  +{static} wrap(iface : Class<T>, target : T, tx : TransactionRunner) : T
+  +invoke(proxy : Object, method : Method, args : Object[]) : Object
+}
+interface Interceptor {
+  +intercept(method : Method, next : Invocation) : Object
+}
+class SecurityInterceptor
+class ExceptionTranslationInterceptor
+class TransactionInterceptor
+interface TransactionRunner <<port>> {
+  +inTransaction(work : Supplier<R>) : R
+}
+
+BoardController --> AllocationService
+ApiController --> AllocationService
+AllocationService <|.. AllocationServiceImpl
+AllocationService <|.. JdkProxy
+JdkProxy --> "1" SecuredTransactionalProxy : handler
+SecuredTransactionalProxy --> "1" AllocationServiceImpl : target
+SecuredTransactionalProxy o--> "1..*" Interceptor : chain {ordered}
+Interceptor <|.. SecurityInterceptor
+Interceptor <|.. ExceptionTranslationInterceptor
+Interceptor <|.. TransactionInterceptor
+TransactionInterceptor --> "1" TransactionRunner
+
+note right of SecurityInterceptor
+  1. @RequiresRole check
+  (protection proxy; before any database work)
+end note
+note right of ExceptionTranslationInterceptor
+  2. OptimisticLock / DuplicateKey
+  → ConcurrencyConflictException (409)
+end note
+note right of TransactionInterceptor
+  3. @Transactional: begin, commit,
+  roll back on any exception
+end note
+note bottom of SecuredTransactionalProxy
+  Before: one invoke() did all three jobs and decoded SQLSTATE "23505".
+  After: each concern is one Interceptor; a new one (timing, per-job authorisation)
+  needs no change here (Open/Closed).
+end note
+@enduml

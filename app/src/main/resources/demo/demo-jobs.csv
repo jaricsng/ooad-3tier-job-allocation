@@ -1,0 +1,11 @@
+# Demo jobs, loaded at start-up when APP_DEMO_DATA=true (see DemoData).
+# Each job is created for today + offset_days; its id is J-MMDD-nn, so the file can be loaded again on later days.
+# Columns: nn,title,skills (separated by |),effort_hours,offset_days,due_after_days,priority
+01,Server patching,LINUX,4,0,0,HIGH
+02,DB backup verification,DBA,2,0,0,CRITICAL
+03,Pen-test report,SECURITY,6,0,2,MEDIUM
+04,Go service upgrade,GO|LINUX,3,0,1,HIGH
+05,Firewall rule review,NETWORK|SECURITY,2,0,1,LOW
+06,Java dependency audit,JAVA|SECURITY,3,0,3,MEDIUM
+07,Kernel update rollout,LINUX,5,0,1,MEDIUM
+08,Replica lag investigation,DBA|LINUX,3,1,1,HIGH

@@ -1,0 +1,54 @@
+@startuml
+!include style.iuml
+skinparam activityBackgroundColor #F3F6FA
+skinparam activityBorderColor #1E4E8C
+skinparam activityDiamondBackgroundColor #FFF6E5
+skinparam activityDiamondBorderColor #D9822B
+title Release, migration and rollback — UML 2.5.1 activity diagram (runbook §10)
+
+|Release engineer|
+start
+:make check\n(conventions, unit tests, policies, API lint);
+:make test-int-all\n(PostgreSQL, MySQL, in-memory);
+if (all green?) then (no)
+  :fix the build;
+  stop
+else (yes)
+endif
+:back up the database (runbook §6);
+:make db-status;
+if (history?) then (CHANGED or UNKNOWN)
+  :restore the edited script, or deploy\nthe build that matches the database;
+  stop
+else (only APPLIED / PENDING)
+endif
+:optional rehearsal:\nTARGET_DB_URL=memory: make db-copy;
+:stop the app;
+|Database|
+:make db-migrate;
+if (migration succeeded?) then (no)
+  if (product?) then (PostgreSQL)
+    :script rolled back automatically\n(one transaction);
+  else (MySQL)
+    :restore the backup\n(DDL commits per statement);
+  endif
+  |Release engineer|
+  :start the previous version;
+  stop
+else (yes)
+endif
+|Release engineer|
+:start the new version;
+:make smoke and sign in once;
+if (healthy?) then (yes)
+  :release done;
+  stop
+else (no)
+  if (migrations expand-only?) then (yes)
+    :start the previous version\n(schema stays: compatible);
+  else (no: contract change)
+    :restore the backup,\nthen start the previous version;
+  endif
+  stop
+endif
+@enduml

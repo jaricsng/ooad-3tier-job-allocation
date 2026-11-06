@@ -1,0 +1,72 @@
+@startuml
+!include style.iuml
+skinparam usecaseBackgroundColor #F3F6FA
+skinparam usecaseBorderColor #1E4E8C
+skinparam packageStyle rectangle
+skinparam packageBorderColor #8A97A6
+skinparam packageFontStyle italic
+skinparam nodesep 30
+skinparam ranksep 60
+title Job Allocation System — Use Case Diagram (UML 2.5.1, as built)
+
+' Reading order, top to bottom: actors -> their own use cases -> shared, included behaviour.
+' Viewer left, Supervisor right; a Supervisor can do everything a Viewer can (generalisation).
+actor "Viewer" as V
+actor "Supervisor" as S
+
+rectangle "Job Allocation System" {
+  package "Browse the board (Viewer)" as P_VIEW {
+    ' Declaration order chosen so Graphviz draws them in workflow order:
+    ' Sign in, View pending jobs, View eligible workers, View allocations, Sign out.
+    usecase "View allocations" as UC_LIST
+    usecase "Sign out" as UC_OUT
+    usecase "Sign in" as UC_IN
+    usecase "View pending jobs" as UC_JOBS
+    usecase "View eligible workers" as UC_ELIG
+  }
+  package "Change allocations (Supervisor)" as P_CHANGE {
+    usecase "Allocate job\n--\nextension points\nstale version" as UC_ALLOC
+    usecase "Auto-allocate jobs" as UC_AUTO
+    usecase "Unassign allocation" as UC_UN
+    usecase "Refresh after\nconcurrent change" as UC_CONFLICT
+  }
+  package "Shared behaviour (included)" as P_SHARED {
+    usecase "Rank workers" as UC_RANK
+    usecase "Check eligibility" as UC_CHECK
+    usecase "Record audit event" as UC_AUDIT
+  }
+}
+
+S -left-|> V
+
+V -- UC_IN
+V -- UC_JOBS
+V -- UC_ELIG
+V -- UC_LIST
+V -- UC_OUT
+S -- UC_ALLOC
+S -- UC_AUTO
+S -- UC_UN
+
+UC_ELIG ..> UC_RANK : <<include>>
+UC_ELIG ..> UC_CHECK : <<include>>
+UC_AUTO ..> UC_RANK : <<include>>
+UC_AUTO ..> UC_ALLOC : <<include>>
+UC_ALLOC ..> UC_CHECK : <<include>>
+UC_ALLOC ..> UC_AUDIT : <<include>>
+UC_UN ..> UC_AUDIT : <<include>>
+UC_ALLOC <.. UC_CONFLICT : <<extend>>
+
+note bottom of UC_CONFLICT
+  «extend» Allocate job at "stale version"
+  condition: {job or worker version changed
+  since the board was loaded}
+end note
+
+note top of V
+  API clients perform the same use cases
+  through /api/v1 with a Viewer or
+  Supervisor account. Every use case
+  except Sign in needs a signed-in actor.
+end note
+@enduml

@@ -1,0 +1,43 @@
+@startuml
+!include style.iuml
+skinparam nodeBackgroundColor #F3F6FA
+skinparam artifactBackgroundColor #FFFFFF
+skinparam artifactBorderColor #1E4E8C
+title Job Allocation — Deployment Diagram (UML 2.5.1, as built: classroom laptop)
+
+node "Developer laptop (macOS)" <<device>> as MAC {
+  node "Google Chrome" <<executionEnvironment>> as BROWSER {
+    artifact "Board pages\n(HTML + app.css)" <<document>> as PAGES
+  }
+  node "JVM — JDK 21+" <<executionEnvironment>> as JVM {
+    artifact "joballoc.jar\n(or target/classes)" <<executable>> as JAR
+    artifact "lib/*.jar\npgjdbc 42.7.14, MySQL Connector/J 26.10.0,\nJackson 2.22.4" <<library>> as LIBS
+    JAR ..> LIBS : <<use>>
+  }
+  node "Docker Engine" <<executionEnvironment>> as DOCKER {
+    node "joballoc-db\nimage postgres:16-alpine" <<container>> as PGC {
+      artifact "PostgreSQL 16 server" <<executable>> as PG
+      artifact "volume joballoc-data\n(databases joballoc,\njoballoc_test)" <<file>> as VOL
+      PG ..> VOL : <<use>>
+    }
+    node "joballoc-mysql (profile mysql)\nimage mysql:8.4" <<container>> as MYC {
+      artifact "MySQL 8.4 server" <<executable>> as MY
+      artifact "volume joballoc-mysql-data\n(databases joballoc,\njoballoc_test)" <<file>> as MYVOL
+      MY ..> MYVOL : <<use>>
+    }
+  }
+}
+node "Integration client\n(optional)" <<device>> as CLIENT
+
+BROWSER -- JVM : <<HTTP>>\n127.0.0.1:8080
+CLIENT -- JVM : <<HTTP>>\nREST /api/v1, JSON, Basic auth
+JVM -- PGC : <<TCP/JDBC>>\n127.0.0.1:${DB_PORT} (5432)
+JVM .. MYC : <<TCP/JDBC, TLS>>\n127.0.0.1:${MYSQL_PORT} (3306)\nalternative to PostgreSQL
+
+note right of JVM
+  Configured by environment variables:
+  DB_URL (jdbc:postgresql:// or jdbc:mysql://
+  picks the SQL dialect), DB_USER, DB_PASSWORD,
+  APP_PORT, APP_BIND, COOKIE_SECURE
+end note
+@enduml

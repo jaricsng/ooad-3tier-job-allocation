@@ -1,0 +1,6 @@
+# worker_id,name,daily_capacity_hours,skills (in order, separated by |)
+W-01,Alice Tan,8,LINUX|GO
+W-02,Ben Lim,8,LINUX
+W-03,Chitra Nair,6,DBA|LINUX
+W-04,Daniel Wong,8,SECURITY|NETWORK
+W-05,Erin Koh,4,JAVA|GO|SECURITY

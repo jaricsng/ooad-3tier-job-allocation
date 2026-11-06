@@ -1,0 +1,78 @@
+@startuml
+!include style.iuml
+skinparam ActivityBackgroundColor #F3F6FA
+skinparam ActivityBorderColor #1E4E8C
+skinparam ActivityDiamondBackgroundColor #FFF6E5
+skinparam ActivityDiamondBorderColor #D9822B
+skinparam SwimlaneBorderColor #8A97A6
+title Allocate Job — Activity Diagram (UML 2.5.1, as built)
+
+|Supervisor|
+start
+:Select a pending job on the board;
+|Presentation (web)|
+:GET /board?jobId=…;
+|Business|
+:findEligibleWorkers(jobId)\nWorker.canTake() + SKILL_MATCH ranking;
+|Presentation (web)|
+:Render eligible workers (and reasons for the others);
+|Supervisor|
+:Click [Allocate] on a worker;
+|Presentation (web)|
+:POST /board/allocate\n(jobId, workerId, jobVersion, _csrf);
+if (Session valid and CSRF token matches?) then ([no])
+  :403 / redirect to sign-in;
+  stop
+else ([yes])
+endif
+|Business|
+if (SecuredTransactionalProxy:\nactor has SUPERVISOR role?) then ([no])
+  :ForbiddenException → 403;
+  stop
+else ([yes])
+endif
+:BEGIN transaction;
+|Persistence|
+:JobDAO.findById(jobId);
+|Business|
+if (job.version == jobVersion?) then ([no])
+  :ConcurrencyConflict → ROLLBACK;
+  |Presentation (web)|
+  :Redirect with "changed by someone else" (409);
+  stop
+else ([yes])
+endif
+|Persistence|
+:WorkerDAO.findWithAllocations(workerId, job.workDate);
+|Business|
+if (Worker.canTake(job)?\nskills · capacity · PENDING) then ([no])
+  :AllocationRuleException → ROLLBACK;
+  |Presentation (web)|
+  :Redirect with the reason (422);
+  stop
+else ([yes])
+endif
+|Business|
+:Worker.assign(job)\n→ Job ALLOCATED, new Allocation, JobAllocated event;
+|Persistence|
+:AllocationDAO.save(allocation)\nJobDAO.update(job)  [version check]\nWorkerDAO.update(worker)  [version check];
+if (Optimistic lock OK?) then ([no])
+  |Business|
+  :OptimisticLock → 409 → ROLLBACK;
+  stop
+else ([yes])
+endif
+|Business|
+:DomainEventPublisher.publish(JobAllocated)\n(listeners called in order, same transaction);
+:AuditListener.on(JobAllocated);
+|Persistence|
+:AuditDAO.append(audit_event);
+|Business|
+:WorkloadMetricsListener.on(JobAllocated)\n(count for /health);
+:COMMIT;
+|Presentation (web)|
+:303 redirect /board?msg=Allocated… (PRG);
+|Supervisor|
+:See the job in Allocations;
+stop
+@enduml

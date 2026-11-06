@@ -1,0 +1,84 @@
+@startuml
+!include style.iuml
+allowmixing
+hide empty members
+hide circle
+left to right direction
+skinparam usecaseBackgroundColor #FFF6E5
+skinparam usecaseBorderColor #D9822B
+skinparam usecaseBorderStyle dashed
+skinparam packageStyle rectangle
+title GoF behavioural patterns: where they are applied (UML 2.5.1 collaboration uses, as built)
+
+usecase "Strategy\n(allocation policy)" as STR
+usecase "Strategy\n(SQL dialect)" as STD
+usecase "Template Method\n(policies)" as TMP
+usecase "Template Method\n(DAOs)" as TMD
+usecase "Observer" as OBS
+usecase "Chain of\nResponsibility" as COR
+
+package "Persistence" {
+  class AbstractOrmDAO
+  class OrmJobDAO
+  interface SqlDialect
+  class PostgresDialect
+  class MySqlDialect
+}
+package "Business" {
+  class AllocationServiceImpl
+  interface AllocationPolicy
+  class SkillMatchPolicy
+  class LeastLoadedPolicy
+  class FirstFitPolicy
+  class DomainEventPublisher
+  interface DomainEventListener
+  class AuditListener
+  class WorkloadMetricsListener
+  class Worker
+  class SecuredTransactionalProxy
+  interface Interceptor
+  class SecurityInterceptor
+  class ExceptionTranslationInterceptor
+  class TransactionInterceptor
+}
+
+STR .. AllocationServiceImpl : context
+STR .. AllocationPolicy : strategy
+STR .. SkillMatchPolicy : concreteStrategy
+STR .. LeastLoadedPolicy : concreteStrategy
+STR .. FirstFitPolicy : concreteStrategy
+STD .. AbstractOrmDAO : context
+STD .. SqlDialect : strategy
+STD .. PostgresDialect : concreteStrategy
+STD .. MySqlDialect : concreteStrategy
+
+TMP .. AllocationPolicy : abstractClass\nrank() fixed, order() varies
+TMP .. SkillMatchPolicy : concreteClass
+
+TMD .. AbstractOrmDAO : abstractClass\nquery() / afterLoad()
+TMD .. OrmJobDAO : concreteClass
+
+OBS .. DomainEventPublisher : subject
+OBS .. DomainEventListener : observer
+OBS .. AuditListener : concreteObserver
+OBS .. WorkloadMetricsListener : concreteObserver
+OBS .. Worker : event source\n(JobAllocated)
+
+COR .. SecuredTransactionalProxy : client
+COR .. Interceptor : handler
+COR .. SecurityInterceptor : concreteHandler 1
+COR .. ExceptionTranslationInterceptor : concreteHandler 2
+COR .. TransactionInterceptor : concreteHandler 3
+
+AllocationPolicy <|.. SkillMatchPolicy
+AllocationPolicy <|.. LeastLoadedPolicy
+AllocationPolicy <|.. FirstFitPolicy
+DomainEventListener <|.. AuditListener
+DomainEventListener <|.. WorkloadMetricsListener
+Interceptor <|.. SecurityInterceptor
+Interceptor <|.. ExceptionTranslationInterceptor
+Interceptor <|.. TransactionInterceptor
+AbstractOrmDAO <|-- OrmJobDAO
+' Layout only: keep the tiers in reading order, Business above Persistence.
+Interceptor -[hidden]down- SqlDialect
+@enduml

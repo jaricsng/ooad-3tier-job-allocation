@@ -1,0 +1,117 @@
+# SAST rules as code for this code base (Semgrep). Run: make sast. Rule tests: make sast-test.
+# Each rule names the OWASP Top 10 2021 / CWE it guards against. A justified exception is written next to
+# the code as "// nosemgrep: <rule-id> -- <reason>"; the audit report lists every such exception.
+rules:
+  - id: jdbc-sql-built-by-concatenation
+    message: >-
+      SQL built by string concatenation and passed to JDBC. Bind values with '?' parameters
+      (PreparedStatement); only trusted identifiers from entity metadata may be concatenated.
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A03:2021 Injection", cwe: "CWE-89"}
+    patterns:
+      - pattern: $S.$METHOD(<... "..." + $X ...>, ...)
+      - metavariable-regex:
+          metavariable: $METHOD
+          regex: ^(prepareStatement|prepareCall|execute|executeQuery|executeUpdate|addBatch)$
+      # Literal-only concatenation ("create table " + "x (...)") is just line wrapping, not injection.
+      - metavariable-pattern:
+          metavariable: $X
+          patterns:
+            - pattern-not: '"..."'
+
+
+  - id: weak-hash-algorithm
+    message: MD5 and SHA-1 are broken for security use. Use SHA-256 or better (PBKDF2/bcrypt/Argon2 for passwords).
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A02:2021 Cryptographic Failures", cwe: "CWE-328"}
+    pattern-either:
+      - pattern: java.security.MessageDigest.getInstance("MD5")
+      - pattern: java.security.MessageDigest.getInstance("SHA-1")
+      - pattern: java.security.MessageDigest.getInstance("SHA1")
+      - pattern: MessageDigest.getInstance("MD5")
+      - pattern: MessageDigest.getInstance("SHA-1")
+      - pattern: MessageDigest.getInstance("SHA1")
+
+  - id: insecure-random-for-security
+    message: java.util.Random is predictable. Use java.security.SecureRandom for tokens, salts and ids.
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A02:2021 Cryptographic Failures", cwe: "CWE-330"}
+    pattern-either:
+      - pattern: new java.util.Random(...)
+      - pattern: new Random(...)
+      - pattern: Math.random()
+
+  - id: os-command-execution
+    message: Running OS commands from the application is an injection risk and is not needed by this app.
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A03:2021 Injection", cwe: "CWE-78"}
+    pattern-either:
+      - pattern: Runtime.getRuntime().exec(...)
+      - pattern: new ProcessBuilder(...)
+
+  - id: unsafe-java-deserialization
+    message: Java deserialization of untrusted data can run attacker code. Use JSON with explicit DTOs.
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A08:2021 Software and Data Integrity Failures", cwe: "CWE-502"}
+    pattern: new java.io.ObjectInputStream(...)
+
+  - id: trust-all-certificates
+    message: A trust manager or hostname verifier that accepts everything disables TLS protection.
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A07:2021 Identification and Authentication Failures", cwe: "CWE-295"}
+    pattern-either:
+      - pattern: |
+          public void checkServerTrusted(...) { }
+      - pattern: |
+          (HostnameVerifier $V) = ($H, $S) -> true;
+      - pattern: |
+          public boolean verify(String $H, SSLSession $S) { return true; }
+
+  - id: jdbc-url-disables-tls
+    message: This JDBC URL turns TLS or certificate checks off. Production URLs must verify TLS (policy P7).
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A02:2021 Cryptographic Failures", cwe: "CWE-319"}
+    pattern-regex: '"jdbc:[a-z]+://[^"]*(sslmode=disable|useSSL=false|sslMode=DISABLED|allowPublicKeyRetrieval=true)'
+
+  - id: hard-coded-secret
+    message: A secret-looking value is hard-coded. Read it from configuration (Setting, a secret store) instead.
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A07:2021 Identification and Authentication Failures", cwe: "CWE-798"}
+    patterns:
+      - pattern-either:
+          - pattern: String $NAME = "$VALUE";
+          - pattern: final String $NAME = "$VALUE";
+          - pattern: static final String $NAME = "$VALUE";
+      - metavariable-regex:
+          metavariable: $NAME
+          regex: (?i).*(password|passwd|secret|api_?key|token)$
+      - metavariable-regex:
+          metavariable: $VALUE
+          regex: .{6,}
+
+  - id: stack-trace-to-console
+    message: printStackTrace leaks internals and bypasses the log. Log with java.util.logging and a request id.
+    severity: WARNING
+    languages: [java]
+    metadata: {owasp: "A09:2021 Security Logging and Monitoring Failures", cwe: "CWE-209"}
+    pattern: $E.printStackTrace()
+
+  - id: xml-parser-without-xxe-protection
+    message: XML parsers must disable external entities (XXE). Set FEATURE_SECURE_PROCESSING and disallow DOCTYPE.
+    severity: ERROR
+    languages: [java]
+    metadata: {owasp: "A05:2021 Security Misconfiguration", cwe: "CWE-611"}
+    patterns:
+      - pattern: javax.xml.parsers.DocumentBuilderFactory.newInstance()
+      - pattern-not-inside: |
+          $F = javax.xml.parsers.DocumentBuilderFactory.newInstance();
+          ...
+          $F.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);

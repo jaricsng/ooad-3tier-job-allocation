@@ -1,0 +1,106 @@
+@startuml
+!include style.iuml
+allowmixing
+skinparam packageStyle folder
+skinparam ranksep 80
+skinparam nodesep 40
+skinparam labelFontSize 13
+title Job Allocation — Layered Architecture (UML 2.5.1 package diagram, as built after refactoring)
+
+package "edu.ooad.joballoc" <<composition root>> as ROOT {
+  label "App (wires all tiers)\nconfig.Setting / AppConfig (configuration as code)" as LROOT
+}
+
+package "adapter" <<adapters>> as ADP {
+  label "TransactionManagerAdapter,\nInMemoryTransactionAdapter,\nJdbcDatabaseHealthAdapter" as LADP
+}
+
+package "storage + tool" <<storage families>> as STG {
+  label "Storage (Abstract Factory): RelationalStorage,\nInMemoryStorage, StorageFactory, StorageTransfer;\ntool.DatabaseTool (db-status, db-migrate, db-copy)" as LSTG
+}
+
+package "Presentation layer — web" <<layer>> as PL {
+  package "web.http" as WHTTP {
+    label "HttpExchangeAdapter, FrontController, Router,\nErrorMapper, IdempotentHandler, Request/Response" as L1
+  }
+  package "web.controller" as WCTL {
+    label "BoardController, ApiController,\nLoginController, HealthController" as L2
+  }
+  package "web.view" as WVIEW {
+    label "BoardView, LoginView, Html" as L3
+  }
+  package "web.dto" as WDTO {
+    label "JobSummaryDTO, ProblemDTO, …" as L4
+  }
+}
+
+package "Business layer — business, domain" <<layer>> as BL {
+  package "business" as BUS {
+    label "AllocationService «facade»,\nAllocationServiceImpl, BusinessTier «factory»,\nSecuredTransactionalProxy" as L5
+  }
+  package "business.proxy" as BPX {
+    label "Security, ExceptionTranslation,\nTransaction interceptors" as L5b
+  }
+  package "business.port" as BPORT {
+    label "TransactionRunner,\nDatabaseHealth" as L5c
+  }
+  package "business.policy" as BPOL {
+    label "AllocationPolicy,\nPolicyFactory, 3 strategies" as L6
+  }
+  package "business.event" as BEV {
+    label "DomainEventPublisher,\nAuditListener, Metrics" as L7
+  }
+  package "business.security" as BSEC {
+    label "AuthService, SecurityContext,\nPasswordHasher" as L8
+  }
+  package "domain" as DOM {
+    label "Job, Worker, Allocation, JobCriteria,\nSkill, AppUser, AuditEvent" as L9
+  }
+}
+
+package "Persistence layer — persistence" <<layer>> as PERS {
+  package "persistence.dao" as PDAO {
+    label "DAOFactory, GenericDAO, JobDAO, …\nDataAccessException hierarchy" as L10
+  }
+  package "persistence.ormdao" as PORMDAO {
+    label "OrmDAOFactory,\nAbstractOrmDAO, Orm*DAO" as L11
+  }
+  package "persistence.memory" as PMEM {
+    label "InMemoryDAOFactory\n(DB_URL=memory: and unit tests)" as L12
+  }
+  package "persistence.orm" as PORM {
+    label "TransactionManager, ConnectionPool,\nEntityMetadata, Migrator, DemoData" as L13
+  }
+  package "persistence.dialect" as PDIA {
+    label "SqlDialect, DialectFactory,\nPostgresDialect, MySqlDialect" as L15
+  }
+  package "persistence.mapping" as PMAP {
+    label "@Entity, @Table, @Column,\n@Id, @Version, @CollectionTable" as L14
+  }
+}
+
+database "PostgreSQL 16\nor MySQL 8.4\n(Docker)" as DB
+
+ROOT .down.> PL : <<create>>
+ROOT .down.> BL : <<create>>
+ROOT .down.> PERS : <<create>>
+ROOT .right.> ADP : <<create>>
+ROOT .right.> STG : <<use>>\nStorageFactory.create
+STG ..> ADP : <<create>>
+STG ..> PERS : <<create>>
+
+PL .down.> BL : <<use>>\nfacade, ports, domain types
+BL .down.> PERS : <<use>>\nDAO interfaces and exceptions only
+ADP ..> BPORT : <<realize>>\nports
+ADP ..> PORM : <<use>>\nadaptee
+PDAO .up.> DOM : <<use>>\nentity types
+PERS .down.> DB : JDBC (parameterised SQL)
+
+legend bottom
+  Enforced by ArchitectureTest (7 rules): web never imports persistence; business never imports
+  persistence.orm, ormdao, memory, dialect or JDBC; persistence never imports business, web or adapter;
+  adapter never imports web; no tier imports storage or tool (only App and tools choose a storage).
+  Before the refactoring, web imported JobCriteria and TransactionManager and business decoded
+  SQL error codes (8 violations); now there are no exceptions.
+endlegend
+@enduml

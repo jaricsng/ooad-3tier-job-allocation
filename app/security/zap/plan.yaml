@@ -1,0 +1,91 @@
+# DAST as code: OWASP ZAP Automation Framework plan. Run: make dast (starts the app on memory: first).
+# ${DAST_PORT} and ${APP_DIR} are filled in by the Makefile (ZAP does not substitute them in every field).
+# Scans the web UI (spider + passive rules) and the REST API from its OpenAPI contract (active rules),
+# then fails the build on any High-risk alert. Reports: target/security/zap/.
+env:
+  contexts:
+    - name: joballoc
+      urls:
+        - http://127.0.0.1:${DAST_PORT}
+      includePaths:
+        - http://127.0.0.1:${DAST_PORT}.*
+      excludePaths:
+        - http://127.0.0.1:${DAST_PORT}/logout.*
+  parameters:
+    failOnError: true
+    failOnWarning: false
+    progressToStdout: true
+
+jobs:
+  # Accepted for the LOCAL test harness only (scoped to 127.0.0.1, so a scan of any other host still
+  # reports them at full risk). Production is HTTPS-only: policies P1, P3 and P7 require Secure cookies,
+  # HSTS and verified TLS, and the reverse proxy terminates TLS (runbook §9).
+  - type: alertFilter
+    alertFilters:
+      - ruleId: 10105
+        ruleName: Authentication Credentials Captured (Basic auth over plain HTTP on localhost)
+        newRisk: Info
+        url: http://127\.0\.0\.1:.*
+        urlRegex: true
+      - ruleId: 10106
+        ruleName: HTTP Only Site (local harness has no TLS by design)
+        newRisk: Info
+        url: http://127\.0\.0\.1:.*
+        urlRegex: true
+
+  # Authenticate the API with the classroom demo supervisor (Basic auth, dev only), so the active scan
+  # reaches every operation. The value is the documented demo account, never a real credential.
+  - type: replacer
+    parameters:
+      deleteAllRules: true
+    rules:
+      - description: Basic auth for /api/v1 (demo supervisor)
+        url: http://127.0.0.1:${DAST_PORT}/api/v1/.*
+        matchType: req_header
+        matchString: Authorization
+        matchRegex: false
+        replacementString: Basic c3VwZXJ2aXNvcjpTdXBlcnZpc29yIzIwMjY=
+
+  - type: openapi
+    parameters:
+      # A scan copy made by the Makefile (licence block removed: ZAP's parser wrongly rejects a valid 3.1 licence).
+      apiFile: ${APP_DIR}/target/security/zap/openapi-scan.yaml
+      # The contract's paths already start with /api/v1, so the target is the server root.
+      targetUrl: http://127.0.0.1:${DAST_PORT}
+
+  - type: spider
+    parameters:
+      context: joballoc
+      url: http://127.0.0.1:${DAST_PORT}/
+      maxDuration: 2
+
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+
+  - type: activeScan
+    parameters:
+      context: joballoc
+      maxRuleDurationInMins: 2
+      maxScanDurationInMins: 12
+    policyDefinition:
+      defaultStrength: medium
+      defaultThreshold: medium
+
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: ${APP_DIR}/target/security/zap
+      reportFile: zap-report.html
+      reportTitle: Job Allocation DAST (OWASP ZAP)
+
+  - type: report
+    parameters:
+      template: traditional-json
+      reportDir: ${APP_DIR}/target/security/zap
+      reportFile: zap-report.json
+
+  - type: exitStatus
+    parameters:
+      errorLevel: High
+      warnLevel: Medium

@@ -1,0 +1,66 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+title DAO + Template Method + Exception Translation — as built (UML 2.5.1 class diagram)
+
+class AllocationServiceImpl <<service>>
+interface "GenericDAO<T, ID>" as GenericDAO <<DAO>> {
+  +findById(id : ID) : Optional<T>
+  +findAll() : List<T>
+  +findByIds(ids : Collection<ID>) : List<T> {default: one by one}
+  +save(entity : T) : void
+  +update(entity : T) : void
+  +delete(id : ID) : void
+}
+interface JobDAO <<DAO>> {
+  +findPending(criteria : JobCriteria) : List<Job>
+}
+abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template>> {
+  #tx : TransactionManager
+  #meta : EntityMetadata<T>
+  #dialect : SqlDialect
+  +findByIds(ids : Collection<ID>) : List<T>
+  #query(clause : String, params : Object[]) : List<T> {final}
+  #execute(sql : String, params : Object[]) : int {final}
+  #afterLoad(entity : T) : void
+  -withStatement(sql : String, work : StatementWork<R>) : R
+  -loadCollections(con, entities) : void
+  -translate(sql : String, e : SQLException) : DataAccessException
+}
+interface SqlDialect <<strategy>> {
+  +isUniqueViolation(e : SQLException) : boolean
+  +firstRowsClause() : String
+}
+class OrmJobDAO {
+  +findPending(criteria : JobCriteria) : List<Job>
+}
+class "InMemoryDAOFactory.MemJobDAO" as MemJobDAO <<test double>>
+class DataAccessException <<exception>>
+class OptimisticLockException <<exception>>
+class DuplicateKeyException <<exception>>
+
+AllocationServiceImpl --> "1" JobDAO
+GenericDAO <|-- JobDAO
+GenericDAO <|.. AbstractOrmDAO
+JobDAO <|.. OrmJobDAO
+AbstractOrmDAO <|-- OrmJobDAO
+JobDAO <|.. MemJobDAO
+DataAccessException <|-- OptimisticLockException
+DataAccessException <|-- DuplicateKeyException
+AbstractOrmDAO ..> DataAccessException : <<create>>
+AbstractOrmDAO --> "1" SqlDialect
+
+note right of AbstractOrmDAO
+  Template Method: connection, statement, parameter binding,
+  identity map and error translation are fixed (withStatement,
+  query). Subclasses add finders and may override afterLoad().
+  @CollectionTable sets load in ONE query per collection (no N+1).
+  "Is this a duplicate key?" is asked of the SqlDialect
+  (PostgreSQL 23505, MySQL 1062): vendor codes stay in persistence.
+end note
+note bottom of MemJobDAO
+  Same interface and the same exception types:
+  unit tests exercise production error paths.
+end note
+@enduml

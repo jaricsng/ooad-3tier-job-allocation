@@ -1,0 +1,27 @@
+@startsalt
+scale 3
+{+
+  {* Dashboard | <b>Allocation</b> | Jobs | Workers | Reports }
+  { Priority: | ^All^ | Skill: | ^Any^ | Date: | "2026-11-05" | [Refresh] }
+  {
+    {+
+      <b>Pending Jobs
+      {#
+        . | Job ID | Title | Skill | Effort(h) | Due
+        [X] | J-1021 | Server patching | Linux | 4 | 06-Nov
+        [ ] | J-1022 | DB backup verify | DBA | 2 | 06-Nov
+        [ ] | J-1023 | Pen-test report | Security | 6 | 07-Nov
+      }
+    } | {+
+      <b>Eligible Workers (J-1021)
+      {#
+        . | Name | Skills | Load | Capacity
+        (X) | Alice Tan | Linux, Go | 4h | 8h
+        () | Ben Lim | Linux | 7h | 8h
+      }
+    }
+  }
+  { [Allocate] | [Auto-Allocate] | [Unassign] | [Cancel] }
+  { <i>Alice Tan: 4h remaining capacity after allocation</i> }
+}
+@endsalt

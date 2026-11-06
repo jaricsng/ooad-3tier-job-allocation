@@ -1,0 +1,90 @@
+@startuml
+!include style.iuml
+allowmixing
+hide empty members
+hide circle
+left to right direction
+skinparam usecaseBackgroundColor #FFF6E5
+skinparam usecaseBorderColor #D9822B
+skinparam usecaseBorderStyle dashed
+skinparam packageStyle rectangle
+title Where enterprise (PoEAA), ECB and GRASP patterns are applied (UML 2.5.1 collaboration uses, as built after refactoring)
+
+package "Presentation" {
+  class FrontController
+  class Router
+  class BoardView
+  class BoardController
+  class JobSummaryDTO
+  class AllocateRequestDTO
+}
+package "Business" {
+  class AllocationServiceImpl
+  class Job
+  class Worker
+  class Allocation
+  class JobCriteria
+}
+package "Persistence" {
+  interface JobDAO
+  class OrmJobDAO
+  class EntityMetadata
+  class TransactionManager
+  class "TransactionManager.TxContext" as TxContext
+  class Migrator
+  class AbstractOrmDAO
+  class DataAccessException
+}
+
+usecase "Front Controller" as FCP
+usecase "Entity–Control–Boundary" as ECB
+usecase "Data Transfer Object" as DTO
+usecase "Service Layer" as SL
+usecase "Domain Model\n(GRASP Information\nExpert + Creator)" as DM
+usecase "Data Access Object" as DAOP
+usecase "Metadata Mapping" as MM
+usecase "Identity Map" as IM
+usecase "Optimistic Offline Lock" as OOL
+usecase "Query Object" as QO
+usecase "Exception Translation" as ET
+
+FCP .. FrontController : frontController
+FCP .. Router : dispatcher
+FCP .. BoardController : command handler
+
+ECB .. BoardView : boundary
+ECB .. BoardController : control
+ECB .. AllocationServiceImpl : control
+ECB .. Job : entity
+
+DTO .. JobSummaryDTO : transferObject
+DTO .. AllocateRequestDTO : transferObject
+
+SL .. AllocationServiceImpl : service
+
+DM .. Worker : expert (canTake)\ncreator (assign)
+DM .. Allocation : created
+DM .. Job : entity
+
+DAOP .. JobDAO : dao
+DAOP .. OrmJobDAO : daoImpl
+
+MM .. EntityMetadata : mapper\n(@Entity, @Column)
+MM .. OrmJobDAO : user
+
+IM .. TxContext : identityMap
+IM .. TransactionManager : unit of work scope
+
+OOL .. Job : @Version
+OOL .. Worker : @Version
+OOL .. OrmJobDAO : UPDATE … WHERE version = ?
+
+JobDAO <|.. OrmJobDAO
+TransactionManager *-- TxContext
+Worker "1" --> "0..*" Allocation
+Allocation "0..*" --> "1" Job
+QO .. JobCriteria : query object\n(domain: shared by all layers)
+QO .. OrmJobDAO : interpreter
+ET .. AbstractOrmDAO : translator\n(SQLSTATE → DAO exception)
+ET .. DataAccessException : contract exception
+@enduml

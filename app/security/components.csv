@@ -1,0 +1,12 @@
+# Third-party components: the single source for the SBOM (make sbom), the vulnerability scan (make sca)
+# and the licence policy (policy/governance.rego). Every jar in lib.sha256 must be listed here.
+# file,group,name,version,ecosystem,license (SPDX),scope (runtime|test|static)
+postgresql-42.7.14.jar,org.postgresql,postgresql,42.7.14,maven,BSD-2-Clause,runtime
+mysql-connector-j-26.10.0.jar,com.mysql,mysql-connector-j,26.10.0,maven,GPL-2.0-only WITH Universal-FOSS-exception-1.0,runtime
+jackson-core-2.22.4.jar,com.fasterxml.jackson.core,jackson-core,2.22.4,maven,Apache-2.0,runtime
+jackson-databind-2.22.4.jar,com.fasterxml.jackson.core,jackson-databind,2.22.4,maven,Apache-2.0,runtime
+jackson-annotations-2.22.jar,com.fasterxml.jackson.core,jackson-annotations,2.22,maven,Apache-2.0,runtime
+jackson-datatype-jsr310-2.22.4.jar,com.fasterxml.jackson.datatype,jackson-datatype-jsr310,2.22.4,maven,Apache-2.0,runtime
+junit-4.13.2.jar,junit,junit,4.13.2,maven,EPL-1.0,test
+hamcrest-core-1.3.jar,org.hamcrest,hamcrest-core,1.3,maven,BSD-3-Clause,test
+src/main/resources/static/bootstrap.min.css,,bootstrap,5.3.8,npm,MIT,static

@@ -1,0 +1,9 @@
+# Reference data for DB_URL=memory: (same rows as db/migration/*/V2__seed_reference_data.sql).
+# A unit test (InMemoryStorageTest) checks these rows match the MySQL V2 script, so they cannot drift.
+# code,name
+LINUX,Linux administration
+DBA,Database administration
+SECURITY,Security testing
+GO,Go development
+JAVA,Java development
+NETWORK,Networking

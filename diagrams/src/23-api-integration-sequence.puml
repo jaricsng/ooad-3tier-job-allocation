@@ -1,0 +1,53 @@
+@startuml
+!include style.iuml
+hide footbox
+title REST integration patterns: safe retry of an allocation (UML 2.5.1 sequence diagram, as built)
+
+actor ":IntegrationClient" as C
+participant ":HttpExchangeAdapter" as HX
+control ":FrontController" as FC
+participant ":IdempotentHandler" as IH <<decorator>>
+control ":ApiController" as AC
+participant ":IdempotencyStore" as ST
+participant ":AllocationService" as S <<facade + proxy>>
+
+C -> HX : GET /api/v1/jobs/J-1106-02\nX-Request-Id: trace-0001
+HX -> FC : Request
+FC -> AC : job(request)
+AC -> S : getJob(id)
+S --> AC : job (version 4)
+AC --> C : 200, ETag: "4", X-Request-Id: trace-0001
+
+C -> HX : POST /api/v1/allocations\nIf-Match: "4", Idempotency-Key: k-42\n{jobId, workerId}
+HX -> FC : Request
+FC -> IH : handle(request)
+IH -> ST : begin(scope, sha256(body))
+ST --> IH : Started
+IH -> AC : allocate(request)
+AC -> S : allocate(jobId, workerId, 4)
+S --> AC : allocation
+AC --> IH : 201 Created, Location
+IH -> ST : complete(scope, response copy)
+IH --> C : 201 Created, Location: /api/v1/allocations/{id}
+
+note over C : The response is lost (timeout).\nThe client retries with the SAME key.
+
+C -> HX : POST /api/v1/allocations\nIf-Match: "4", Idempotency-Key: k-42
+HX -> FC : Request
+FC -> IH : handle(request)
+IH -> ST : begin(scope, sha256(body))
+ST --> IH : Replay(stored response)
+IH --> C : 201 Created (same Location)\nIdempotent-Replayed: true
+
+alt same key, different body
+  ST --> IH : Mismatch
+  IH --> C : 422 application/problem+json
+else no key, stale If-Match
+  AC --> C : 412 application/problem+json\n{type: /problems/precondition-failed, requestId}
+end
+
+note right of IH
+  DECORATOR around the handler: idempotency is added
+  without changing ApiController (Idempotent Receiver, EIP).
+end note
+@enduml

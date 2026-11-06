@@ -1,0 +1,2 @@
+# Python security tools, pinned (installed by `make tools` into tools/venv, never system-wide).
+semgrep==1.97.0

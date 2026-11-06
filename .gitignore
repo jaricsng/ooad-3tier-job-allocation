@@ -1,0 +1,34 @@
+# Private material (speaker notes, internal reviews, denylist): see private/README.md
+private/
+
+# Repository root: generated output, local tooling and machine files never go to the remote.
+# app/.gitignore adds the application's own rules (target/, tools/, .env, test reports).
+
+# Generated slide deck (PDF/PPTX/HTML): rebuild with `make slides`, or attach to a GitHub Release
+build/
+coverage/
+
+# Dependencies and local environments
+node_modules/
+.venv/
+venv/
+
+# Secrets and local configuration (never commit; see app/config/*.env.example)
+.env
+.env.*
+!.env.example
+*.pem
+*.p8
+*.key
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.log
+
+# Local sync bundles
+.sync/
+*.tgz

@@ -1,0 +1,21 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers — Job Allocation System (C4 level 2, as built: 3 tiers)
+
+Person(supervisor, "Supervisor", "Allocates jobs")
+Person(viewer, "Viewer", "Read only")
+System_Ext(client, "Integration client", "Optional REST consumer")
+
+System_Boundary(sys, "Job Allocation System") {
+  Container(browser, "Web browser", "Chrome / any browser", "Tier 1: shows server-rendered pages; no JavaScript (CSP script-src 'none')")
+  Container(app, "Job Allocation web application", "Java 21, JDK HttpServer, no frameworks", "Tier 2: UI Service (board + REST /api/v1), business logic and patterns, mini ORM")
+  ContainerDb(db, "Job Allocation database", "PostgreSQL 16 (default) or MySQL 8.4, in Docker", "Tier 3: jobs, workers, allocations, users, append-only audit_event")
+}
+
+Rel(supervisor, browser, "Uses")
+Rel(viewer, browser, "Uses")
+Rel(browser, app, "Requests pages, submits forms", "HTTP :8080, session cookie + CSRF token")
+Rel(client, app, "Calls", "JSON over HTTP :8080, Basic auth")
+Rel(app, db, "Reads and writes", "JDBC, :5432 or :5433")
+@enduml

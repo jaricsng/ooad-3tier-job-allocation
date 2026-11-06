@@ -1,0 +1,105 @@
+@startuml
+!include style.iuml
+allowmixing
+hide empty members
+hide circle
+left to right direction
+skinparam usecaseBackgroundColor #FFF6E5
+skinparam usecaseBorderColor #D9822B
+skinparam usecaseBorderStyle dashed
+skinparam packageStyle rectangle
+title GoF creational and structural patterns: where they are applied (UML 2.5.1 collaboration uses, as built)
+
+usecase "Facade" as FAC
+usecase "Proxy" as PRX
+usecase "Adapter\n(HTTP)" as ADH
+usecase "Adapter\n(port)" as ADP
+usecase "Decorator" as DEC
+usecase "Factory" as FCT
+usecase "Factory\n(dialect)" as FCD
+usecase "Abstract Factory" as AF
+usecase "Singleton" as SGL
+
+' Declared bottom-up: with 'left to right direction' PlantUML stacks the LAST package on top,
+' so the page reads Presentation (top), Business, Persistence (bottom).
+package "Persistence" {
+  interface DAOFactory
+  class OrmDAOFactory
+  class InMemoryDAOFactory
+  interface JobDAO
+  class OrmJobDAO
+  class ConnectionPool
+  class TransactionManager
+  class DialectFactory
+  interface SqlDialect
+}
+package "Adapters" {
+  class TransactionManagerAdapter
+}
+package "Business" {
+  interface AllocationService
+  class SecuredTransactionalProxy
+  class AllocationServiceImpl
+  class BusinessTier
+  class PolicyFactory
+  interface AllocationPolicy
+  interface TransactionRunner
+}
+package "Presentation" {
+  class BoardController
+  class ApiController
+  interface Handler
+  class IdempotentHandler
+  class HttpExchangeAdapter
+  class "HttpExchange (JDK)" as HttpExchange
+  class Request
+}
+
+FAC .. AllocationService : facade
+FAC .. BoardController : client
+FAC .. ApiController : client
+
+PRX .. AllocationService : subject
+PRX .. SecuredTransactionalProxy : proxy
+PRX .. AllocationServiceImpl : realSubject
+
+ADH .. HttpExchangeAdapter : adapter
+ADH .. HttpExchange : adaptee
+ADH .. Request : target
+
+ADP .. TransactionManagerAdapter : adapter
+ADP .. TransactionManager : adaptee
+ADP .. TransactionRunner : target
+
+DEC .. Handler : component
+DEC .. IdempotentHandler : decorator
+DEC .. ApiController : concreteComponent\n(allocate, autoAllocate)
+
+FCT .. PolicyFactory : creator
+FCD .. DialectFactory : creator
+FCD .. SqlDialect : product
+FCD .. ConnectionPool : client
+FCT .. AllocationPolicy : product
+FCT .. BusinessTier : creator\n(wires the business tier)
+
+AF .. DAOFactory : abstractFactory
+AF .. OrmDAOFactory : concreteFactory
+AF .. InMemoryDAOFactory : concreteFactory
+AF .. JobDAO : abstractProduct
+AF .. OrmJobDAO : concreteProduct
+
+SGL .. ConnectionPool : singleton
+
+AllocationService <|.. AllocationServiceImpl
+AllocationService <|.. SecuredTransactionalProxy
+Handler <|.. IdempotentHandler
+TransactionRunner <|.. TransactionManagerAdapter
+DAOFactory <|.. OrmDAOFactory
+DAOFactory <|.. InMemoryDAOFactory
+JobDAO <|.. OrmJobDAO
+
+note bottom
+  Dashed oval = collaboration use (UML 2.5.1 §11.7): the pattern, with each
+  dashed line labelled by the role the class plays. Behavioural patterns: 18b.
+end note
+@enduml

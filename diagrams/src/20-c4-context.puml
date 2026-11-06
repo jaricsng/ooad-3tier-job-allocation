@@ -1,0 +1,15 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System Context — Job Allocation System (C4 level 1, as built)
+
+Person(supervisor, "Supervisor", "Allocates, auto-allocates and unassigns jobs")
+Person(viewer, "Viewer", "Follows the board read-only")
+System_Ext(client, "Integration client", "Optional: any system using the REST API with a Viewer or Supervisor account")
+
+System(joballoc, "Job Allocation System", "Allocates pending jobs to workers by skill and daily capacity; keeps an append-only audit trail")
+
+Rel(supervisor, joballoc, "Signs in, allocates jobs", "HTTP, web browser")
+Rel(viewer, joballoc, "Signs in, views the board", "HTTP, web browser")
+Rel(client, joballoc, "Reads jobs, allocates", "JSON over HTTP, Basic auth")
+@enduml

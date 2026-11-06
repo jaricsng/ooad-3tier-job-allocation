@@ -1,0 +1,51 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+left to right direction
+title Observer — domain events (UML 2.5.1, as built)
+class Worker <<entity>> {
+  +assign(job, actor, now) : Allocation
+  +pullEvents() : List<DomainEvent>
+}
+interface DomainEvent {
+  +type() : String
+  +entityId() : String
+}
+class JobAllocated <<record>> {
+  +jobId, workerId, allocationId, actor
+  +occurredAt : Instant
+}
+class JobUnassigned <<record>> {
+  +jobId, workerId, allocationId, actor
+  +occurredAt : Instant
+}
+class AllocationServiceImpl <<control>>
+class DomainEventPublisher <<subject>> {
+  +subscribe(l : DomainEventListener) : void
+  +publish(e : DomainEvent) : void
+  +publishAll(es : List<DomainEvent>) : void
+}
+interface DomainEventListener <<observer>> {
+  +on(e : DomainEvent) : void
+}
+class AuditListener {
+  -audit : AuditDAO
+}
+class WorkloadMetricsListener {
+  -counts : Map<String, AtomicLong>
+  +snapshot() : Map<String, Long>
+}
+DomainEvent <|.. JobAllocated
+DomainEvent <|.. JobUnassigned
+Worker ..> JobAllocated : <<create>>
+AllocationServiceImpl ..> JobUnassigned : <<create>>
+AllocationServiceImpl --> "1" DomainEventPublisher : events
+DomainEventPublisher o--> "0..*" DomainEventListener : listeners
+DomainEventListener <|.. AuditListener
+DomainEventListener <|.. WorkloadMetricsListener
+note bottom of DomainEventListener
+  Extension point: a mail listener would be
+  one new class; nothing else changes.
+end note
+@enduml

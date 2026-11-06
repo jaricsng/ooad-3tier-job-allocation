@@ -1,0 +1,73 @@
+@startuml
+!include style.iuml
+hide footbox
+title Allocate Job — Sequence Diagram (UML 2.5.1, as built after refactoring)
+actor ":Supervisor" as Supervisor
+boundary ":BoardView" as V
+control ":FrontController" as FC
+control ":BoardController" as BC
+participant ":SecuredTransactionalProxy" as PX <<AllocationService>>
+participant ":AllocationServiceImpl" as S
+participant ":OrmJobDAO" as JD
+participant ":OrmWorkerDAO" as WD
+entity "worker:Worker" as W
+entity "job:Job" as J
+participant ":OrmAllocationDAO" as AD
+participant ":DomainEventPublisher" as EP
+participant ":AuditListener" as AL
+participant ":Database\n(PostgreSQL or MySQL)" as DB <<database>>
+
+Supervisor -> V : click [Allocate]
+V -> FC : POST /board/allocate\n(jobId, workerId, jobVersion, _csrf)
+FC -> FC : (via HttpExchangeAdapter)\nresolve session → Actor, check CSRF,\nassign X-Request-Id
+FC -> BC : allocate(request)
+BC -> PX : allocate(jobId, workerId, jobVersion)
+PX -> PX : SecurityInterceptor:\n@RequiresRole(SUPERVISOR)
+PX -> DB : TransactionInterceptor: BEGIN
+PX -> S : allocate(jobId, workerId, jobVersion)
+S -> JD : findById(jobId)
+JD -> DB : SELECT … FROM job WHERE job_id = ?
+JD --> S : job
+alt job.version != jobVersion
+  S --> PX : ConcurrencyConflictException
+  PX -> DB : ROLLBACK
+  PX --> BC : 409
+  BC --> V : 303 /board?err=…changed by someone else
+else else
+  S -> WD : findWithAllocations(workerId, job.workDate)
+  WD -> DB : SELECT worker; SELECT active allocations
+  WD --> S : worker (+ allocations)
+  S -> W : assign(job, actor, now)
+  W -> J : isAllocatable()
+  W -> W : hasAllSkills() and remainingCapacity() >= effort
+  alt rule violated
+    W --> S : AllocationRuleException
+    S --> PX : (propagates)
+    PX -> DB : ROLLBACK
+    PX --> BC : 422
+    BC --> V : 303 /board?err=<reason>
+  else else
+    W -> J : markAllocated()
+    W --> S : allocation (+ JobAllocated event)
+    S -> AD : save(allocation)
+    S -> JD : update(job)  — WHERE version = ?
+    S -> WD : update(worker)  — WHERE version = ?
+    alt row changed meanwhile
+      JD --> S : OptimisticLockException\n(persistence.dao)
+      S --> PX : (propagates)
+      PX -> DB : ROLLBACK
+      PX -> PX : ExceptionTranslationInterceptor:\n→ ConcurrencyConflictException
+      PX --> BC : 409
+      BC --> V : 303 /board?err=…refresh and retry
+    else else
+      S -> EP : publishAll(worker.pullEvents())
+      EP -> AL : on(JobAllocated)
+      AL -> DB : INSERT INTO audit_event
+      S --> PX : allocation
+      PX -> DB : COMMIT
+      PX --> BC : allocation
+      BC --> V : 303 /board?msg=Allocated…
+    end
+  end
+end
+@enduml

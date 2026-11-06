@@ -1,0 +1,2 @@
+-- V3: nothing to do on MySQL. The MySQL schema started with collection tables (worker_skill, job_skill);
+-- this file exists so version numbers stay aligned across database products.

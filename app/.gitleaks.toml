@@ -1,0 +1,49 @@
+# Secret scanning rules as code (Gitleaks). Run: make secrets.
+# Starts from Gitleaks' built-in rules; every exception below states why it is safe.
+title = "Job Allocation secret scan"
+
+[extend]
+useDefault = true
+
+# ---- Project rules: secrets this code base could leak that the built-in rules may miss ----------
+[[rules]]
+id = "jdbc-url-with-password"
+description = "A JDBC URL that carries a password (credentials belong in DB_PASSWORD from a secret store)"
+regex = '''jdbc:[a-z0-9]+://[^\s"'<>]*(?i:password|pwd)=[^&\s"'<>]{3,}'''
+keywords = ["jdbc:"]
+
+[[rules]]
+id = "db-password-assignment"
+description = "A non-empty database password or SSO client secret in a config or env file"
+regex = '''(?m)^[ \t]*(?:export[ \t]+)?(?:(?:DB|MYSQL|MYSQL_ROOT|POSTGRES|TARGET_DB|TEST_DB)_PASSWORD|SSO_[A-Z]+_CLIENT_SECRET)[ \t]*[=:][ \t]*["']?([^\s"'$#{}][^\s"']{3,})'''
+secretGroup = 1
+keywords = ["password"]
+  [rules.allowlist]
+  description = "The documented local development defaults (policy P5 allows only these in committed files)"
+  regexes = ['''^joballoc$''', '''^joballoc-root$''']
+
+[[rules]]
+id = "pbkdf2-hash-outside-seed"
+description = "A password hash outside the seed data: real users' hashes must never be committed"
+regex = '''pbkdf2-sha256\$\d+\$[A-Za-z0-9+/=]{16,}\$[A-Za-z0-9+/=]{16,}'''
+keywords = ["pbkdf2-sha256"]
+  [rules.allowlist]
+  description = "The two documented demo users in the seed scripts and the in-memory seed"
+  paths = ['''src/main/resources/db/migration/(postgresql|mysql)/V2__seed_reference_data\.sql''', '''src/main/resources/db/memory/users\.csv''']
+
+[allowlist]
+description = "Documented classroom demo credentials and generated or third-party folders"
+# The two demo passwords are published on purpose (README, user guide, runbook) and must be
+# changed outside a classroom; the runbook shows how. They are not secrets.
+regexes = [
+  '''Supervisor#2026''',
+  '''Viewer#2026''',
+]
+# Build output, downloaded tools and third-party packages are not our source.
+paths = [
+  '''(^|/)target/''',
+  '''(^|/)tools/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)e2e/(playwright-report|test-results)/''',
+  '''(^|/)lib/.*\.jar$''',
+]

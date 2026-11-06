@@ -1,0 +1,74 @@
+@startuml
+!include style.iuml
+skinparam classAttributeIconSize 0
+hide empty members
+title Strategy + Factory for database products — as built (UML 2.5.1 class diagram)
+
+interface SqlDialect <<strategy>> {
+  +productName() : String
+  +migrationFolder() : String
+  +connectionProperties() : Properties
+  +firstRowsClause() : String
+  +validationQuery() : String
+  +isUniqueViolation(e : SQLException) : boolean
+}
+class PostgresDialect {
+  migrationFolder = "postgresql"
+  duplicate key = SQLSTATE 23505
+}
+class MySqlDialect {
+  migrationFolder = "mysql"
+  duplicate key = error 1062
+  session time zone = UTC
+}
+class DialectFactory <<factory>> {
+  +{static} forUrl(jdbcUrl : String) : SqlDialect
+  +{static} isSupported(jdbcUrl : String) : boolean
+  +{static} supportedPrefixes() : List<String>
+}
+class ConnectionPool <<singleton>> {
+  +dialect() : SqlDialect
+}
+class TransactionManager {
+  +dialect() : SqlDialect
+}
+abstract class "AbstractOrmDAO<T, ID>" as AbstractOrmDAO <<template>> {
+  #dialect : SqlDialect
+}
+class OrmAuditDAO
+class Migrator {
+  +{static} migrate(pool : ConnectionPool) : int
+  +{static} statements(script : String) : List<String>
+}
+class JdbcDatabaseHealthAdapter <<adapter>>
+enum Setting <<configuration>> {
+  DB_URL
+}
+
+SqlDialect <|.. PostgresDialect
+SqlDialect <|.. MySqlDialect
+DialectFactory ..> SqlDialect : <<create>>
+ConnectionPool ..> DialectFactory : forUrl(url)
+ConnectionPool --> "1" SqlDialect
+TransactionManager --> "1" ConnectionPool
+AbstractOrmDAO ..> TransactionManager : dialect()
+AbstractOrmDAO --> "1" SqlDialect
+AbstractOrmDAO <|-- OrmAuditDAO
+Migrator ..> SqlDialect : migrationFolder()
+JdbcDatabaseHealthAdapter ..> SqlDialect : validationQuery()
+Setting ..> DialectFactory : isSupported(DB_URL)
+
+note right of SqlDialect
+  Only what really differs between products.
+  Everything else is portable SQL:
+  IN lists, EXISTS, CASE, collection tables.
+  Add Oracle = OracleDialect + one entry in
+  DialectFactory + db/migration/oracle/ scripts
+  + the integration tests run against it.
+end note
+note bottom of Migrator
+  db/migration/<folder>/V1, V2, V3 …
+  Same version numbers on every product;
+  DDL in each product's own syntax.
+end note
+@enduml

@@ -1,0 +1,54 @@
+/* Job Allocation: brand layer on top of Bootstrap 5.3 (served locally; no CDN, no scripts, no inline styles).
+   Brand colours match the OOAD slide deck. Bootstrap does the layout; this file only themes it. */
+:root {
+  --ja-blue: #1E4E8C;
+  --ja-blue-dark: #173E70;
+  --ja-orange: #B5651D;
+  --bs-primary: #1E4E8C;
+  --bs-primary-rgb: 30, 78, 140;
+  --bs-link-color: #1E4E8C;
+  --bs-link-color-rgb: 30, 78, 140;
+  --bs-link-hover-color: #173E70;
+  --bs-body-font-family: Inter, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+.app-navbar { background-color: var(--ja-blue); border-bottom: 4px solid var(--ja-orange); }
+.app-navbar .role-badge { background-color: rgba(255, 255, 255, 0.18); }
+.text-app { color: var(--ja-blue); }
+
+.btn-primary {
+  --bs-btn-bg: var(--ja-blue); --bs-btn-border-color: var(--ja-blue);
+  --bs-btn-hover-bg: var(--ja-blue-dark); --bs-btn-hover-border-color: var(--ja-blue-dark);
+  --bs-btn-active-bg: var(--ja-blue-dark); --bs-btn-active-border-color: var(--ja-blue-dark);
+  --bs-btn-disabled-bg: var(--ja-blue); --bs-btn-disabled-border-color: var(--ja-blue);
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--ja-blue); --bs-btn-border-color: var(--ja-blue);
+  --bs-btn-hover-bg: var(--ja-blue); --bs-btn-hover-border-color: var(--ja-blue);
+  --bs-btn-active-bg: var(--ja-blue-dark); --bs-btn-active-border-color: var(--ja-blue-dark);
+}
+
+/* Panels: a coloured top edge identifies each area of the board. */
+.panel { border: 0; border-top: 4px solid var(--ja-blue); }
+.panel-allocations { border-top-color: var(--ja-orange); }
+.panel .card-header { background-color: #FFFFFF; }
+
+/* Table rows */
+tr.selected > * { --bs-table-bg-state: rgba(30, 78, 140, 0.10); }
+tr.ineligible { color: var(--bs-secondary-color); }
+.reason { font-size: 0.8125rem; }
+.nowrap { white-space: nowrap; }
+
+/* Worker load: the native <meter> element (no inline style needed, so the strict CSP stays). */
+meter.load { width: 5.5rem; height: 0.8rem; vertical-align: middle; }
+
+/* Keyboard users can always see where they are. */
+:focus-visible { outline: 3px solid var(--ja-orange); outline-offset: 2px; }
+
+/* Phones: tighter tables so the action button stays in view without sideways scrolling. */
+@media (max-width: 575.98px) {
+    .panel .table { font-size: .8125rem; }
+    .panel .table > :not(caption) > * > * { padding: .35rem .3rem; }
+    .panel .badge { font-size: .65em; }
+    .panel .btn-sm { padding: .2rem .45rem; font-size: .75rem; }
+}

@@ -1,0 +1,51 @@
+# API design rules as code (Spectral). Run: make api-lint
+# Starts from the OpenAPI recommended ruleset, then adds this team's integration conventions.
+extends:
+  - - spectral:oas
+    - recommended
+rules:
+  # Every error response is RFC 9457 Problem Details.
+  errors-use-problem-details:
+    description: 4xx and 5xx responses must use application/problem+json
+    severity: error
+    given: $.paths[*][*].responses[?(@property >= '400' && @property < '600')]
+    then:
+      field: content.application/problem+json
+      function: truthy
+  # All operations live under a version prefix.
+  paths-are-versioned:
+    description: Paths must start with /api/v1/
+    severity: error
+    given: $.paths
+    then:
+      field: '@key'
+      function: pattern
+      functionOptions:
+        match: ^/api/v1/
+  # Non-idempotent operations accept an Idempotency-Key.
+  post-accepts-idempotency-key:
+    description: Every POST documents the Idempotency-Key header
+    severity: error
+    given: $.paths[*].post
+    then:
+      field: parameters
+      function: schema
+      functionOptions:
+        schema:
+          type: array
+          contains:
+            type: object
+            properties:
+              name:
+                const: Idempotency-Key
+            required:
+              - name
+  # Operation IDs are stable lowerCamelCase names (used by code generators).
+  operation-id-camel-case:
+    description: operationId must be lowerCamelCase
+    severity: error
+    given: $.paths[*][*].operationId
+    then:
+      function: pattern
+      functionOptions:
+        match: ^[a-z][a-zA-Z0-9]+$

@@ -6,11 +6,13 @@ Thank you for picking this project up. It is a teaching example, so every change
 
 | Step | Command (from the repository root) | Guide |
 |---|---|---|
-| Prerequisites | JDK 21+ (the newest JDK also works), Docker Desktop, Node.js 18+, Python 3.12+ | [`app/docs/runbook.md` §2](app/docs/runbook.md#2-install-prerequisites-macos) |
-| Pinned gate tools | `make tools` (once; `make tools-dast` for the ZAP scan) | [`app/docs/security-testing.md`](app/docs/security-testing.md) |
+| Prerequisites | JDK 21+ (the newest JDK also works), Docker Desktop (database, and the pinned Semgrep image used by `make check`), Node.js 18+, Python 3.12+ | [`app/docs/runbook.md` §2](app/docs/runbook.md#2-install-prerequisites-macos) |
+| Pinned gate tools | `make tools` (once; pulls the Semgrep image too; `make tools-dast` for the ZAP scan) | [`app/docs/security-testing.md`](app/docs/security-testing.md) |
 | Database + app | `make db-up` then `make run` → <http://127.0.0.1:8080> (`supervisor` / `Supervisor#2026`) | [`app/README.md` → Quick start](app/README.md#quick-start) |
 | No Docker | `make run-memory` (in-memory storage) | [runbook §12](app/docs/runbook.md#12-in-memory-storage-no-database) |
 | Git hooks | `pipx install pre-commit && pre-commit install` | [`.pre-commit-config.yaml`](.pre-commit-config.yaml) |
+
+**Docker Desktop file sharing:** `make check` mounts the project folder into the Semgrep container. If the project lives outside the folders Docker shares (default: `/Users` on macOS), add it under *Settings → Resources → File sharing*, or `make sast` stops with "Docker cannot mount …".
 
 Application targets work from the repository root or from `app/`: the root `Makefile` forwards them. Only `make all` and `make clean` differ (root: teaching materials; use `make -C app clean` for the application).
 

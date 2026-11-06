@@ -1,5 +1,10 @@
 package edu.ooad.joballoc.web.http;
 
+import edu.ooad.joballoc.web.http.IdempotencyStore.InFlight;
+import edu.ooad.joballoc.web.http.IdempotencyStore.Mismatch;
+import edu.ooad.joballoc.web.http.IdempotencyStore.Replay;
+import edu.ooad.joballoc.web.http.IdempotencyStore.Started;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
@@ -49,14 +54,21 @@ public final class IdempotentHandler implements Handler {
         String user = req.actor() == null ? "anonymous" : req.actor().username();
         String scope = user + " " + req.method() + " " + req.path() + " " + key;
         IdempotencyStore.Outcome outcome = store.begin(scope, sha256(req.body()));
-        return switch (outcome) {
-            case IdempotencyStore.Replay r -> r.response().setHeader("Idempotent-Replayed", "true");
-            case IdempotencyStore.InFlight f ->
-                    throw new ConflictException("A request with this " + HEADER + " is still being processed");
-            case IdempotencyStore.Mismatch m ->
-                    throw new UnprocessableException(HEADER + " was already used with a different request body");
-            case IdempotencyStore.Started s -> executeOnce(req, scope);
-        };
+        // instanceof patterns rather than a pattern-matching switch: Semgrep's Java parser cannot read
+        // switch patterns, and a file it cannot parse would be left out of the SAST scan entirely.
+        if (outcome instanceof Replay r) {
+            return r.response().setHeader("Idempotent-Replayed", "true");
+        }
+        if (outcome instanceof InFlight) {
+            throw new ConflictException("A request with this " + HEADER + " is still being processed");
+        }
+        if (outcome instanceof Mismatch) {
+            throw new UnprocessableException(HEADER + " was already used with a different request body");
+        }
+        if (outcome instanceof Started) {
+            return executeOnce(req, scope);
+        }
+        throw new IllegalStateException("Unknown idempotency outcome: " + outcome);
     }
 
     private Response executeOnce(Request req, String scope) throws Exception {

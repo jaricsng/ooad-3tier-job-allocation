@@ -85,7 +85,13 @@ GITLEAKS_TGZ       := gitleaks_$(GITLEAKS_VERSION)_$(shell uname -s | tr A-Z a-z
 GITLEAKS           := $(TOOLS)/gitleaks
 ZAP_VERSION        := 2.17.0
 ZAP                := $(TOOLS)/ZAP_$(ZAP_VERSION)/zap.sh
-SEMGREP            := $(TOOLS)/venv/bin/semgrep
+# SAST runs Semgrep from its official container image, pinned by digest: the same engine on every laptop
+# and in CI (Semgrep publishes no Intel-Mac binaries from 1.183). Needs Docker running, like the database.
+# To upgrade: docker buildx imagetools inspect semgrep/semgrep:<version>, take the index digest, run make sast.
+SEMGREP_VERSION    := 1.184.0
+SEMGREP_IMAGE      := semgrep/semgrep@sha256:cc1b68266f267878b39739373ea9985b9a78e5d64497dd875c8de100b22695ed
+SEMGREP            := docker run --rm --user "$$(id -u):$$(id -g)" -e HOME=/tmp -e SEMGREP_ENABLE_VERSION_CHECK=0 \
+                      -v "$(CURDIR):/src" -w /src $(SEMGREP_IMAGE) semgrep
 SECURITY_OUT       := target/security
 DAST_PORT          ?= 8098
 
@@ -112,12 +118,15 @@ $(ZAP):
 	@cd $(TOOLS) && grep " ZAP_$(ZAP_VERSION)_Crossplatform.zip$$" ../tools.sha256 | (command -v shasum >/dev/null && shasum -a 256 -c - || sha256sum -c -)
 	cd $(TOOLS) && unzip -q ZAP_$(ZAP_VERSION)_Crossplatform.zip && rm ZAP_$(ZAP_VERSION)_Crossplatform.zip
 
-$(SEMGREP): security/requirements.txt
-	python3 -m venv $(TOOLS)/venv
-	$(TOOLS)/venv/bin/pip install --quiet --disable-pip-version-check -r security/requirements.txt
-	@touch $@
+semgrep-image: ## Check Docker and pull the pinned Semgrep image (semgrep $(SEMGREP_VERSION))
+	@docker info >/dev/null 2>&1 || { echo "SAST needs Docker: start Docker Desktop (Semgrep runs from its pinned container image)"; exit 1; }
+	@docker image inspect $(SEMGREP_IMAGE) >/dev/null 2>&1 || docker pull $(SEMGREP_IMAGE)
+	@docker run --rm -v "$(CURDIR):/src" $(SEMGREP_IMAGE) true >/dev/null 2>&1 || { \
+	  echo "SAST: Docker cannot mount $(CURDIR)."; \
+	  echo "  Docker Desktop: Settings > Resources > File sharing > add this folder (or a parent such as $$HOME), then Apply & restart."; \
+	  exit 1; }
 
-tools: $(CHECKSTYLE_JAR) $(CONFTEST) $(GITLEAKS) $(SEMGREP) ## Download the pinned gate tools into tools/ (checked against tools.sha256)
+tools: $(CHECKSTYLE_JAR) $(CONFTEST) $(GITLEAKS) semgrep-image ## Download the pinned gate tools into tools/ (checked against tools.sha256)
 
 tools-dast: $(ZAP) ## Download the pinned OWASP ZAP (about 200 MB) for make dast
 
@@ -208,11 +217,15 @@ secrets: $(GITLEAKS) ## Secret-leak gate: keys, passwords, tokens, private keys 
 	$(GITLEAKS) dir . --config .gitleaks.toml --no-banner --redact --exit-code 1 --report-format json --report-path $(SECURITY_OUT)/secrets.json
 	security/secrets-selftest.sh $(GITLEAKS)
 
-sast: $(SEMGREP) ## SAST: Semgrep with the project's rules (security/semgrep), fails on any finding
+sast: semgrep-image ## SAST: Semgrep with the project's rules (security/semgrep), fails on any finding
 	@mkdir -p $(SECURITY_OUT)
 	$(SEMGREP) --test --metrics=off security/semgrep/
 	$(SEMGREP) scan --config security/semgrep/java-security.yml --metrics=off --error --quiet \
 	  --json-output=$(SECURITY_OUT)/sast.json src/main/java
+	@# A file Semgrep cannot parse is not scanned at all: treat parse errors as a failed gate, not a pass.
+	@python3 -c "import json,sys; e=json.load(open('$(SECURITY_OUT)/sast.json'))['errors']; \
+	  [print('SAST blind spot:', x.get('path') or (x.get('spans') or [{}])[0].get('file'), '-', x.get('message','').splitlines()[0]) for x in e]; \
+	  sys.exit(1 if e else 0)"
 
 sbom: ## CycloneDX SBOM of every third-party component (target/security/sbom.cdx.json)
 	python3 security/sbom.py

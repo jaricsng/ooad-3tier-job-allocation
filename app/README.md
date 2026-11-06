@@ -33,7 +33,7 @@ No Docker? Install PostgreSQL 14+ locally and run `make db-setup` once instead.
 | `make test-int` | 35 integration tests against PostgreSQL: ORM, optimistic locking, append-only audit, migration checksums, data copy, HTTP API, OWASP checks, login CSRF, SSO against a test identity provider |
 | `make test-int-mysql` / `test-int-memory` / `test-int-all` | The same tests on MySQL (35) / in memory (22, SQL-only tests skipped) / on all three |
 | `make e2e` | 4 Playwright browser tests in Chrome, including a 390 px phone viewport (starts and stops the app itself) |
-| `make check` | Quality gate without a database: Checkstyle conventions, unit tests, Rego policies, OpenAPI lint, secret-leak scan, SAST, governance (run before every commit) |
+| `make check` | Quality gate without a database (needs Docker running, for the pinned Semgrep image): Checkstyle conventions, unit tests, Rego policies, OpenAPI lint, secret-leak scan, SAST, governance (run before every commit) |
 | `make lint` / `make policy` / `make api-lint` | Coding conventions / policy as code / OpenAPI lint (`make tools` fetches the pinned tools first; Spectral needs Node.js) |
 | `make all` | All of the above |
 | `make package` | Builds `target/joballoc.jar` |

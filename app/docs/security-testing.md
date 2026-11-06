@@ -25,6 +25,9 @@ Every security and governance check is code in this repository: versioned, revie
 
 ## 2. SAST (static analysis)
 
+Semgrep runs from its official container image, pinned by digest in `app/Makefile` (`SEMGREP_IMAGE`), so every laptop and CI use the same engine; `make sast` therefore needs Docker running. The gate fails on any finding **and** on any file Semgrep cannot parse (a "SAST blind spot"). Docker must be able to mount the `app` folder; on macOS, if `make sast` reports "Docker cannot mount …", add the folder (or a parent) under Docker Desktop *Settings → Resources → File sharing*.
+
+
 Ten Semgrep rules for this code base, each tied to OWASP Top 10 2021 and CWE:
 - SQL built by concatenation;
 - MD5/SHA-1;
@@ -103,6 +106,8 @@ Two alerts are lowered to Informational, **only for 127.0.0.1**: "Basic auth ove
 | F6 | CI (first run on GitHub) | SAST crashed before scanning: only `semgrep` was pinned, and a fresh Python 3.12 environment resolved without `pkg_resources`, which semgrep's Python path needs (through opentelemetry). A laptop with an older environment passed | Gate not running = no SAST | `security/requirements.txt` now pins every package to an exact version, including `setuptools` 80.9.0 (the last release with `pkg_resources`); checked on semgrep's Python path (`--legacy`) | Fixed |
 | F7 | Audit on macOS | `make dast` printed ZAP's usage text: the repository path contains a space and the Makefile passed it unquoted | DAST not running | Paths quoted in the `dast` recipe; verified from a path with a space | Fixed |
 | F8 | Audit on macOS | Pen-test probe WSTG-INPV-11 reported "broken pipe": the server correctly answered 413 after 64 KB and closed, while the probe was still sending 2 MB | False failure (the control works) | The probe declares 2 MB, sends just over the limit, then reads the answer; same check, no race on any OS | Fixed |
+
+| F9 | Dependabot / SAST | (a) Dependabot raised two advisories against `setuptools` 80.9, pinned only because semgrep 1.97 needed `pkg_resources` (F6); single-package bumps of `setuptools`, `opentelemetry-api` and `protobuf` all broke semgrep. (b) While upgrading, Semgrep reported a **parse error** in `IdempotentHandler.java` (pattern-matching `switch`), and `make sast` still passed: a file Semgrep cannot parse is not scanned at all | Vulnerable build dependency; silent SAST blind spot | Semgrep upgraded to 1.184.0. That release has no Intel-Mac build, so Semgrep now runs from its official container image pinned by digest (same engine everywhere; no Python packages for it at all, so no `setuptools`). `make sast` now **fails on any parse error**; the switch rewritten with `instanceof` patterns; coding rule added | Fixed |
 
 Lesson from F6–F8: a gate that crashes or misfires is as bad as no gate. Run the gates on a second machine and in CI before trusting a green result, and read *why* a gate failed before changing it.
 

@@ -36,7 +36,7 @@ Never edit files in `build/`, `diagrams/png/` or `diagrams/svg/` by hand.
 | `build/` | Generated PDF, PPTX and HTML |
 | `Makefile` | Build targets for all of the above |
 | `scripts/check_public.py` | `make check-public`: fails if private material (speaker notes, denylisted terms, anything in `private/`) would be committed |
-| `.github/` | CI workflow (`check`: public-content gate, quality gate, in-memory integration tests; actions pinned by SHA), Dependabot, pull-request template with AI-assistance disclosure |
+| `.github/` | CI workflow (`check` on Java 21 and `check-latest-jdk` on the newest JDK, currently 27: public-content gate, quality gate, in-memory integration tests; actions pinned by SHA), Dependabot, pull-request template with AI-assistance disclosure |
 | `scripts/github-settings.sh` | Applies the GitHub settings: secret scanning and push protection, Dependabot, private vulnerability reporting, protection of `main` |
 | `LICENSE`, `LICENSES/` | MIT for code, CC BY 4.0 for teaching content |
 | `.pre-commit-config.yaml` | Pre-commit hooks: `make -C app check` and `make check-public` |
